@@ -40,8 +40,8 @@ transport::transport() {
     if (ret == ESP_OK) ret = uart_set_pin(UART_PORT_NUM, CONFIG_NCP_BUS_UART_TX_PIN, CONFIG_NCP_BUS_UART_RX_PIN, CONFIG_NCP_BUS_UART_RTS_PIN, CONFIG_NCP_BUS_UART_CTS_PIN);
 #elif defined(CONFIG_NCP_BUS_MODE_USB)
     usb_serial_jtag_driver_config_t usb_config = {
-        .rx_buffer_size = BUF_SIZE,
-        .tx_buffer_size = BUF_SIZE
+        .tx_buffer_size = BUF_SIZE,
+        .rx_buffer_size = BUF_SIZE
     };
     ret = usb_serial_jtag_driver_install(&usb_config);
 #else
@@ -145,7 +145,7 @@ void transport::task_impl() {
                 data_len = read_bytes;
             }
         } else {
-            ESP_LOGE(TAG, "No memory for malloc");
+            ESP_LOGE(TAG, "No memory for malloc transport rx_buffer");
         }
 #endif
         if (rx_buf) {
