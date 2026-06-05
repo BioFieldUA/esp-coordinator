@@ -1,7 +1,0 @@
-#
-# ESP32 Zigbee Coordinator Settings
-#
-# CONFIG_NCP_BUS_MODE_UART is not set
-CONFIG_NCP_BUS_MODE_USB=y
-CONFIG_NCP_BUS_MODE=1
-# end of ESP32 Zigbee Coordinator Settings
