@@ -1,0 +1,78 @@
+name: GitHub Actions Build
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Enter the Firmware Version (e.g. 1.0.7.3)'
+        required: false
+        default: '1.0.0.0'
+        type: string
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - chip: esp32c5
+            transport: usb
+            antenna: ceramic
+          - chip: esp32c5
+            transport: uart
+            antenna: ceramic
+          - chip: esp32c6
+            transport: usb
+            antenna: ceramic
+          - chip: esp32c6
+            transport: usb
+            antenna: external
+          - chip: esp32c6
+            transport: uart
+            antenna: ceramic
+          - chip: esp32c6
+            transport: uart
+            antenna: external
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Install ESP-IDF
+      uses: espressif/install-esp-idf-action@v1
+      with:
+        esp_idf_version: v5.5.4
+        target: ${{ matrix.chip }}
+    - name: Compile ESP-IDF project
+      run: |
+        idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.${{ matrix.chip }};sdkconfig.${{ matrix.transport }};sdkconfig.${{ matrix.antenna }}" build
+    - name: Generate OTA Update (.zigbee)
+      run: |
+        python build_ota.py
+    - name: Merge Binaries into Factory Image
+      run: |
+        TAG_NAME="${{ github.event.release.tag_name }}"
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          TAG_NAME="${{ inputs.version }}"
+        fi
+        TAG_NAME="${TAG_NAME:-1.0.0.0}"
+        if [ "${{ matrix.chip }}" = "esp32c6" ]; then
+          BIN_NAME="esp-coordinator-esp32c6-${{ matrix.transport }}-${{ matrix.antenna }}-${TAG_NAME}-factory.bin"
+        else
+          BIN_NAME="esp-coordinator-esp32c5-${{ matrix.transport }}-${TAG_NAME}-factory.bin"
+        fi
+        esptool.py --chip ${{ matrix.chip }} merge_bin \
+          -o "$BIN_NAME" \
+          --flash_mode dio --flash_freq 80m --flash_size 4MB \
+          0x0 build/bootloader/bootloader.bin \
+          0x8000 build/partition_table/partition-table.bin \
+          0x3d000 build/ota_data_initial.bin \
+          0x3f000 build/phy_init_data.bin \
+          0x40000 build/esp-coordinator.bin
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v2
+      if: github.event_name == 'release'
+      with:
+        files: |
+          esp-coordinator-*.bin
+          *.zigbee
