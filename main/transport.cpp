@@ -103,7 +103,7 @@ void transport::task_impl() {
         size_t data_len = 0;
         uint8_t* rx_buf = nullptr;
 #if defined(CONFIG_NCP_BUS_MODE_UART)
-        if (xQueueReceive(m_uart_queue, &event, portMAX_DELAY)) {
+        if (likely(xQueueReceive(m_uart_queue, &event, portMAX_DELAY))) {
             switch (event.type) {
             case UART_DATA:
                 data_len = event.size;
@@ -119,11 +119,11 @@ void transport::task_impl() {
             default:
                 continue;
             }
-            if (data_len > 0) {
+            if (likely(data_len > 0)) {
                 rx_buf = static_cast<uint8_t*>(malloc(data_len));
-                if (rx_buf) {
+                if (likely(rx_buf)) {
                     int read_bytes = uart_read_bytes(UART_PORT_NUM, rx_buf, data_len, 0);
-                    if (read_bytes <= 0) {
+                    if (unlikely(read_bytes <= 0)) {
                         free(rx_buf);
                         rx_buf = nullptr;
                     } else {
@@ -136,25 +136,26 @@ void transport::task_impl() {
         }
 #elif defined(CONFIG_NCP_BUS_MODE_USB)
         rx_buf = static_cast<uint8_t*>(malloc(BUF_SIZE));
-        if (rx_buf) {
+        if (likely(rx_buf)) {
             int read_bytes = usb_serial_jtag_read_bytes(rx_buf, BUF_SIZE, portMAX_DELAY); // pdMS_TO_TICKS(10)
-            if (read_bytes <= 0) {
+            if (unlikely(read_bytes <= 0)) {
                 free(rx_buf);
                 rx_buf = nullptr;
             } else {
                 data_len = read_bytes;
+                rx_buf = static_cast<uint8_t*>(realloc(rx_buf, data_len));
             }
         } else {
             ESP_LOGE(TAG, "No memory for malloc transport rx_buffer");
         }
 #endif
-        if (rx_buf) {
+        if (likely(rx_buf)) {
             app::ctx_t ncp_event = {
                 .event = app::EVENT_OUTPUT,
                 .size = static_cast<uint16_t>(data_len),
                 .buf_ptr = rx_buf
             };
-            if (app::send_event(ncp_event) != ESP_OK) {
+            if (unlikely(app::send_event(ncp_event) != ESP_OK)) {
                 ESP_LOGE(TAG, "Failed to receive data, dropping data");
                 free(rx_buf);
             }
@@ -166,9 +167,10 @@ void transport::task_impl() {
 }
 
 esp_err_t transport::process_output(void* buffer, uint16_t size) {
-    if (!buffer || size == 0) {
-        if (buffer) free(buffer);
-        return ESP_ERR_INVALID_ARG;
+    if (unlikely(!buffer)) return ESP_ERR_INVALID_ARG;
+    if (unlikely(size == 0)) {
+        free(buffer);
+        return ESP_OK;
     }
     esp_err_t ret = protocol::on_receive_data(static_cast<uint8_t*>(buffer), size);
     free(buffer);
@@ -176,8 +178,8 @@ esp_err_t transport::process_output(void* buffer, uint16_t size) {
 }
 
 esp_err_t transport::process_input(void* buffer, uint16_t size) {
-    if (!buffer) return ESP_ERR_INVALID_ARG;
-    if (size == 0) {
+    if (unlikely(!buffer)) return ESP_ERR_INVALID_ARG;
+    if (unlikely(size == 0)) {
         free(buffer);
         return ESP_OK;
     }
@@ -185,13 +187,13 @@ esp_err_t transport::process_input(void* buffer, uint16_t size) {
     int remaining = size;
     while (remaining > 0) {
         int written = write(data_ptr, remaining);
-        if (written < 0) {
+        if (unlikely(written < 0)) {
             free(buffer);
             return ESP_ERR_NOT_FINISHED;
         } else {
             data_ptr += written;
             remaining -= written;
-            if (remaining > 0) {
+            if (unlikely(remaining > 0)) {
                 portYIELD();
             }
         }
@@ -201,7 +203,11 @@ esp_err_t transport::process_input(void* buffer, uint16_t size) {
 }
 
 esp_err_t transport::send(void* data, uint16_t size) {
-    if (!data || size == 0) return ESP_ERR_INVALID_ARG;
+    if (unlikely(!data)) return ESP_ERR_INVALID_ARG;
+    if (unlikely(size == 0)) {
+        free(data);
+        return ESP_OK;
+    }
     app::ctx_t ncp_event = {
         .event = app::EVENT_INPUT,
         .size = size,

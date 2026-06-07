@@ -135,11 +135,11 @@ void protocol::on_frame(const zb_transport_header_t& hdr, const void* data, uint
 }
 
 esp_err_t protocol::on_receive_data_impl(const uint8_t* data, uint16_t size) {
-    if (m_rx_buffer_pos + size > RINGBUF_SIZE) {
+    if (unlikely(m_rx_buffer_pos + size > RINGBUF_SIZE)) {
         ESP_LOGE(TAG, "RX Buffer overflow, dropping old data");
         m_rx_buffer_pos = 0;
     }
-    if (size > 0) {
+    if (likely(size > 0)) {
         memcpy(&m_rx_buffer[m_rx_buffer_pos], data, size);
         m_rx_buffer_pos += size;
     }
