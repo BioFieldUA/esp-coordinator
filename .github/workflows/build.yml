@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Enter the Firmware Version (e.g. 1.0.7.3)'
+        description: 'Enter the Firmware Version (e.g. v1.0.7.3)'
         required: false
-        default: '1.0.0.0'
+        default: 'v1.0.0.0'
         type: string
 jobs:
   build:
@@ -27,8 +27,7 @@ jobs:
     - name: Install ESP-IDF
       uses: espressif/install-esp-idf-action@v1
       with:
-        esp_idf_version: v5.5
-        target: ${{ matrix.chip }}
+        version: "v5.5.4"
     - name: Compile ESP-IDF project
       run: |
         idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.${{ matrix.chip }};sdkconfig.${{ matrix.transport }};sdkconfig.${{ matrix.antenna }}" build
@@ -37,11 +36,11 @@ jobs:
         python build_ota.py
     - name: Merge Binaries into Factory Image
       run: |
-        TAG_NAME="${{ github.event.release.tag_name }}"
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           TAG_NAME="${{ inputs.version }}"
+        else
+          TAG_NAME="${{ github.event.release.tag_name }}"
         fi
-        TAG_NAME="${TAG_NAME:-1.0.0.0}"
         if [ "${{ matrix.chip }}" = "esp32c6" ]; then
           BIN_NAME="esp-coordinator-esp32c6-${{ matrix.transport }}-${{ matrix.antenna }}-${TAG_NAME}-factory.bin"
         else
