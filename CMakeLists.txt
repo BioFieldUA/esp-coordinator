@@ -2,7 +2,7 @@
 # in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "1.0.2.6")
+set(PROJECT_VER "1.0.2.7")
 
 string(REPLACE "." ";" VER_LIST ${PROJECT_VER})
 list(GET VER_LIST 0 MAJ)
