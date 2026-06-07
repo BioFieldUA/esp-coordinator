@@ -9,6 +9,8 @@ on:
         required: false
         default: 'v1.0.0.0'
         type: string
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,7 +20,21 @@ jobs:
           - chip: esp32c5
             transport: usb
             antenna: ceramic
-
+          - chip: esp32c5
+            transport: uart
+            antenna: ceramic
+          - chip: esp32c6
+            transport: usb
+            antenna: ceramic
+          - chip: esp32c6
+            transport: usb
+            antenna: external
+          - chip: esp32c6
+            transport: uart
+            antenna: ceramic
+          - chip: esp32c6
+            transport: uart
+            antenna: external
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
