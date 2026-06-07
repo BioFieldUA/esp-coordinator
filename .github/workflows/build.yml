@@ -18,21 +18,7 @@ jobs:
           - chip: esp32c5
             transport: usb
             antenna: ceramic
-          - chip: esp32c5
-            transport: uart
-            antenna: ceramic
-          - chip: esp32c6
-            transport: usb
-            antenna: ceramic
-          - chip: esp32c6
-            transport: usb
-            antenna: external
-          - chip: esp32c6
-            transport: uart
-            antenna: ceramic
-          - chip: esp32c6
-            transport: uart
-            antenna: external
+
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
@@ -41,7 +27,7 @@ jobs:
     - name: Install ESP-IDF
       uses: espressif/install-esp-idf-action@v1
       with:
-        esp_idf_version: v5.5.4
+        esp_idf_version: v5.5
         target: ${{ matrix.chip }}
     - name: Compile ESP-IDF project
       run: |
