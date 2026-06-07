@@ -9,6 +9,8 @@ on:
         required: false
         default: 'v1.0.0.0'
         type: string
+permissions:
+  contents: write
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 jobs:
