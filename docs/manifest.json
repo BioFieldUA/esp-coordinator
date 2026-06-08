@@ -1,0 +1,77 @@
+{
+  "name": "ESP-Coordinator",
+  "version": "v1.0.2.7",
+  "funding_url": "https://etherscan.io/address/0x9161918687B8b849e016A137912Ae2B2D7761F21",
+  "builds": [
+    {
+      "chipFamily": "ESP32-C5",
+      "flavors": [
+        {
+          "id": "esp32c5-usb",
+          "name": "ESP32-C5 (USB)",
+          "parts": [
+            {
+              "path": "https://github.com/BioFieldUA/esp-coordinator/releases/download/v1.0.2.7/esp-coordinator-esp32c5-usb-v1.0.2.7-factory.bin",
+              "offset": 0
+            }
+          ]
+        },
+        {
+          "id": "esp32c5-uart",
+          "name": "ESP32-C5 (UART)",
+          "parts": [
+            {
+              "path": "https://github.com/BioFieldUA/esp-coordinator/releases/download/v1.0.2.7/esp-coordinator-esp32c5-uart-v1.0.2.7-factory.bin",
+              "offset": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chipFamily": "ESP32-C6",
+      "flavors": [
+        {
+          "id": "esp32c6-usb-ceramic",
+          "name": "ESP32-C6 (USB + Ceramic Antenna)",
+          "parts": [
+            {
+              "path": "https://github.com/BioFieldUA/esp-coordinator/releases/download/v1.0.2.7/esp-coordinator-esp32c6-usb-ceramic-v1.0.2.7-factory.bin",
+              "offset": 0
+            }
+          ]
+        },
+        {
+          "id": "esp32c6-usb-external",
+          "name": "ESP32-C6 (USB + External Antenna)",
+          "parts": [
+            {
+              "path": "https://github.com/BioFieldUA/esp-coordinator/releases/download/v1.0.2.7/esp-coordinator-esp32c6-usb-external-v1.0.2.7-factory.bin",
+              "offset": 0
+            }
+          ]
+        },
+        {
+          "id": "esp32c6-uart-ceramic",
+          "name": "ESP32-C6 (UART + Ceramic Antenna)",
+          "parts": [
+            {
+              "path": "https://github.com/BioFieldUA/esp-coordinator/releases/download/v1.0.2.7/esp-coordinator-esp32c6-uart-ceramic-v1.0.2.7-factory.bin",
+              "offset": 0
+            }
+          ]
+        },
+        {
+          "id": "esp32c6-uart-external",
+          "name": "ESP32-C6 (UART + External Antenna)",
+          "parts": [
+            {
+              "path": "https://github.com/BioFieldUA/esp-coordinator/releases/download/v1.0.2.7/esp-coordinator-esp32c6-uart-external-v1.0.2.7-factory.bin",
+              "offset": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
