@@ -634,6 +634,15 @@ void device_attribute_callback(zb_uint8_t param) {
             } else if (resp->upgrade_status == ZB_ZCL_OTA_UPGRADE_STATUS_FINISH) {
                 zb_ncp::reset_ota_context();
                 resp->upgrade_status = ZB_ZCL_OTA_UPGRADE_STATUS_OK;
+                zdo_device_annce_params_t params = {
+                    .dev_short_addr = 0x0000,
+                    .dev_ieee = {},
+                    .capability = 0x8F
+                };
+                zb_ieee_addr_t ieee_addr;
+                zb_get_long_address(ieee_addr);
+                memcpy(params.dev_ieee, ieee_addr, sizeof(zb_ieee_addr_t));
+                zb_ncp::indication(ZDO_DEV_ANNCE_IND, &params, sizeof(zdo_device_annce_params_t));
                 app::ctx_t ncp_event = {
                     .event = app::EVENT_RESET,
                     .size = 2000, // Pause 2000 ms before Restart
@@ -798,7 +807,7 @@ void zboss_signal_handler(zb_uint8_t param) {
         {
             ESP_LOGI(TAG, "Initialize Zigbee Stack");
             zb_af_set_data_indication(data_indication_callback);
-            if (ZB_SCHEDULE_APP_ALARM(firmware_upgrade_callback, 0, 5 * ZB_TIME_ONE_SECOND) != RET_OK) {
+            if (ZB_SCHEDULE_APP_ALARM(firmware_upgrade_callback, 0, 14 * ZB_TIME_ONE_SECOND) != RET_OK) {
                 ESP_LOGE(TAG, "Firmware upgrade failed: out of memory");
             }
             zb_uint32_t func, act_func;
@@ -829,11 +838,6 @@ void zboss_signal_handler(zb_uint8_t param) {
         break;
     case ZB_ZDO_SIGNAL_DEVICE_ANNCE:
         {
-            struct zdo_device_annce_params_t {
-                zb_uint16_t dev_short_addr;
-                zb_ieee_addr_t dev_ieee;
-                zb_uint8_t capability;
-            } __attribute__((packed)) __attribute__((aligned(1)));
             zdo_device_annce_params_t params;
             {
                 auto parameters = ZB_ZDO_SIGNAL_GET_PARAMS(sg_p, const zb_zdo_signal_device_annce_params_t);
@@ -853,10 +857,6 @@ void zboss_signal_handler(zb_uint8_t param) {
         break;
     case ZB_ZDO_SIGNAL_LEAVE_INDICATION:
         {
-            struct zdo_device_leave_params_t {
-                zb_ieee_addr_t device_ieee;
-                zb_uint8_t rejoin;
-            } __attribute__((packed)) __attribute__((aligned(1)));
             zdo_device_leave_params_t params;
             {
                 auto parameters = ZB_ZDO_SIGNAL_GET_PARAMS(sg_p, const zb_zdo_signal_leave_indication_params_t);

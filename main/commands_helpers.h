@@ -8,6 +8,17 @@ struct generic_response_t {
     ncp_generic_status_t status;
 } __attribute__((packed)) __attribute__((aligned(1)));
 
+struct zdo_device_annce_params_t {
+    zb_uint16_t dev_short_addr;
+    zb_ieee_addr_t dev_ieee;
+    zb_uint8_t capability;
+} __attribute__((packed)) __attribute__((aligned(1)));
+
+struct zdo_device_leave_params_t {
+    zb_ieee_addr_t device_ieee;
+    zb_uint8_t rejoin;
+} __attribute__((packed)) __attribute__((aligned(1)));
+
 /**
  * @name Standard Response Handlers
  * @brief Templates for generating unified responses with generic status and optional payload.
