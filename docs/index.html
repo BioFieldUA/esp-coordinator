@@ -67,6 +67,25 @@
             font-size: 14px;
             font-weight: bold;
         }
+        .funding-box {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+        }
+        .funding-link {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 8px 16px;
+            background: #4caf50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+            .funding-link:hover {
+                background: #43a047;
+            }
     </style>
 </head>
 <body>
@@ -90,6 +109,10 @@
         </div>
         <div id="status-text" class="status-msg"></div>
         <esp-web-install-button id="install-btn" style="display: none;"></esp-web-install-button>
+        <div class="funding-box">
+            <p>Enjoying the project? Support its development:</p>
+            <a class="funding-link" href="https://etherscan.io/address/0x9161918687B8b849e016A137912Ae2B2D7761F21" target="_blank">🥇 Support Development</a>
+        </div>
     </div>
     <script>
         const apiUrl = "https://api.github.com/repos/BioFieldUA/esp-coordinator/releases/latest";
