@@ -23,7 +23,7 @@
         select {
             width: 100%;
             padding: 10px;
-            margin: 20px 0 10px 0;
+            margin: 0;
             border-radius: 4px;
             border: 1px solid #ccc;
             font-size: 16px;
@@ -67,26 +67,33 @@
             font-size: 14px;
             font-weight: bold;
         }
+        .status-msg {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #555;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>ESP32 Zigbee Coordinator Installer</h1>
         <p>Current release version: <span id="version-text" class="loading">loading...</span></p>
-        <p>Select your board modification:</p>
+        <p>Select your ESP32-board modification:</p>
         <select id="board-select" disabled>
             <option value="">Waiting for release download...</option>
         </select>
         <div class="instruction-box">
             <div class="instruction-title">⚠️ Flash Mode Activation:</div>
             <ol>
-                <li>Connect the board to your computer via USB.</li>
+                <li>Connect the ESP32-board to your computer via USB.</li>
                 <li>Press and <strong>hold</strong> the <strong>BOOT</strong> button.</li>
-                <li>Click the <strong>RESET (EN)</strong> button once.</li>
+                <li>Click the <strong>RESET</strong> button once.</li>
                 <li>Release the <strong>BOOT</strong> button.</li>
                 <li>Now click the <strong>Connect</strong> button below to start flashing.</li>
             </ol>
         </div>
+        <div id="status-text" class="status-msg"></div>
         <esp-web-install-button id="install-btn" style="display: none;"></esp-web-install-button>
     </div>
     <script>
@@ -94,8 +101,7 @@
         const selectEl = document.getElementById('board-select');
         const buttonEl = document.getElementById('install-btn');
         const versionEl = document.getElementById('version-text');
-        let currentVersion = "";
-        let downloadBaseUrl = "";
+        const statusEl = document.getElementById('status-text');
         const boardTemplates = [
             { chip: "ESP32-C5", name: "ESP32-C5 (USB Interface)", fileSuffix: "esp32c5-usb" },
             { chip: "ESP32-C5", name: "ESP32-C5 (UART Interface)", fileSuffix: "esp32c5-uart" },
@@ -104,19 +110,22 @@
             { chip: "ESP32-C6", name: "ESP32-C6 (UART + Ceramic Antenna)", fileSuffix: "esp32c6-uart-ceramic" },
             { chip: "ESP32-C6", name: "ESP32-C6 (UART + External Antenna)", fileSuffix: "esp32c6-uart-external" }
         ];
+        let currentVersion = "";
+        let releaseAssets = [];
+        let activeFirmwareUrl = null;
         async function initInstaller() {
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error("Network error while requesting the GitHub API");
                 const releaseData = await response.json();
                 currentVersion = releaseData.tag_name;
-                downloadBaseUrl = `https://github.com/BioFieldUA/esp-coordinator/releases/download/${currentVersion}/`;
+                releaseAssets = releaseData.assets;
                 versionEl.textContent = currentVersion;
                 versionEl.className = "version-badge";
                 renderSelectOptions();
                 selectEl.disabled = false;
                 buttonEl.style.display = "block";
-                updateManifest();
+                await updateManifest();
             } catch (error) {
                 console.error(error);
                 versionEl.textContent = "Error while loading new release version";
@@ -136,37 +145,60 @@
                 groups[chip].forEach(board => {
                     const option = document.createElement('option');
                     const fileName = `esp-coordinator-${board.fileSuffix}-${currentVersion}-factory.bin`;
-                    option.value = `${board.chip}|${fileName}`;
-                    option.textContent = board.name;
-                    groupEl.appendChild(option);
+                    const asset = releaseAssets.find(a => a.name === fileName);
+                    if (asset) {
+                        option.value = `${board.chip}|${asset.url}`;
+                        option.textContent = board.name;
+                        groupEl.appendChild(option);
+                    }
                 });
                 selectEl.appendChild(groupEl);
             }
         }
-        function updateManifest() {
+        async function updateManifest() {
             if (!selectEl.value) return;
-            const [chipFamily, fileName] = selectEl.value.split('|');
-            const fullBinPath = downloadBaseUrl + fileName;
-            const manifest = {
-                "name": "ESP32 Zigbee Coordinator",
-                "version": currentVersion,
-                "funding_url": "https://etherscan.io/address/0x9161918687B8b849e016A137912Ae2B2D7761F21",
-                "new_install_prompt_erase": true,
-                "builds": [
-                    {
-                        "chipFamily": chipFamily,
-                        "parts": [
-                            { "path": fullBinPath, "offset": 0 }
-                        ]
-                    }
-                ]
-            };
-            const json = JSON.stringify(manifest);
-            const blob = new Blob([json], { type: "application/json" });
-            if (buttonEl.manifest) {
-                URL.revokeObjectURL(buttonEl.manifest);
+            buttonEl.style.display = "none";
+            statusEl.style.color = "#555";
+            statusEl.textContent = "📥 Downloading firmware binary to cache...";
+            const [chipFamily, assetApiUrl] = selectEl.value.split('|');
+            try {
+                const res = await fetch(assetApiUrl, {
+                    headers: { 'Accept': 'application/octet-stream' }
+                });
+                if (!res.ok) throw new Error("Failed to fetch binary via GitHub API");
+                const binBlob = await res.blob();
+                if (activeFirmwareUrl) {
+                    URL.revokeObjectURL(activeFirmwareUrl);
+                }
+                activeFirmwareUrl = URL.createObjectURL(binBlob);
+                const manifest = {
+                    "name": "ESP32 Zigbee Coordinator",
+                    "version": currentVersion,
+                    "funding_url": "https://etherscan.io/address/0x9161918687B8b849e016A137912Ae2B2D7761F21",
+                    "new_install_prompt_erase": true,
+                    "builds": [
+                        {
+                            "chipFamily": chipFamily,
+                            "parts": [
+                                { "path": activeFirmwareUrl, "offset": 0 }
+                            ]
+                        }
+                    ]
+                };
+                const json = JSON.stringify(manifest);
+                const manifestBlob = new Blob([json], { type: "application/json" });
+                if (buttonEl.manifest) {
+                    URL.revokeObjectURL(buttonEl.manifest);
+                }
+                buttonEl.manifest = URL.createObjectURL(manifestBlob);
+                statusEl.textContent = "✅ Firmware is ready.";
+                statusEl.style.color = "green";
+                buttonEl.style.display = "block";
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = "❌ Error downloading firmware file.";
+                statusEl.style.color = "red";
             }
-            buttonEl.manifest = URL.createObjectURL(blob);
         }
         selectEl.addEventListener('change', updateManifest);
         initInstaller();
