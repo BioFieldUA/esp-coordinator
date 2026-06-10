@@ -38,15 +38,19 @@
             font-size: 14px;
             line-height: 1.5;
         }
-            .instruction-box strong {
-                color: #b38600;
-                display: block;
-                margin-bottom: 5px;
-                font-size: 15px;
-            }
-            .instruction-box ol {
-                margin: 0;
-                padding-left: 20px;
+        .instruction-title {
+            color: #b38600;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        .instruction-box ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+            .instruction-box ol li strong {
+                display: inline;
+                color: #000;
             }
         esp-web-install-button {
             margin-top: 25px;
@@ -74,11 +78,11 @@
             <option value="">Waiting for release download...</option>
         </select>
         <div class="instruction-box">
-            <strong>⚠️ Flash Mode Activation:</strong>
+            <div class="instruction-title">⚠️ Flash Mode Activation:</div>
             <ol>
                 <li>Connect the board to your computer via USB.</li>
                 <li>Press and <strong>hold</strong> the <strong>BOOT</strong> button.</li>
-                <li>Click the <strong>RESET</strong> button once.</li>
+                <li>Click the <strong>RESET (EN)</strong> button once.</li>
                 <li>Release the <strong>BOOT</strong> button.</li>
                 <li>Now click the <strong>Connect</strong> button below to start flashing.</li>
             </ol>
