@@ -146,6 +146,11 @@
         function updateManifest() {
             if (!selectEl.value) return;
             const [chipFamily, binPath] = selectEl.value.split('|');
+            let basePath = window.location.origin + window.location.pathname;
+            if (!basePath.endsWith('/')) {
+                basePath += '/';
+            }
+            const absolutePath = basePath + binPath;
             const manifest = {
                 "name": "ESP32 Zigbee Coordinator",
                 "version": currentVersion,
@@ -155,7 +160,7 @@
                     {
                         "chipFamily": chipFamily,
                         "parts": [
-                            { "path": binPath, "offset": 0 }
+                            { "path": absolutePath, "offset": 0 }
                         ]
                     }
                 ]
