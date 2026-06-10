@@ -20,14 +20,33 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+            .container h1 {
+                display: block;
+                font-size: 32px;
+                margin-block-start: 0px;
+                margin-block-end: 6px;
+                margin-inline-start: 0px;
+                margin-inline-end: 0px;
+            }
+            .container p {
+                display: block;
+                font-size: 16px;
+                margin-block-start: 8px;
+                margin-block-end: 8px;
+                margin-inline-start: 0px;
+                margin-inline-end: 0px;
+            }
         select {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             margin: 0;
             border-radius: 4px;
-            border: 1px solid #ccc;
+            border: 2px solid #4caf50;
             font-size: 16px;
         }
+            select::selection {
+                border: 2px solid #4caf50;
+            }
         .instruction-box {
             background: #fff9e6;
             border-left: 4px solid #ffcc00;
@@ -53,7 +72,6 @@
                 color: #000;
             }
         esp-web-install-button {
-            margin-top: 25px;
             display: block;
         }
         .loading {
@@ -68,14 +86,14 @@
             font-weight: bold;
         }
         .funding-box {
-            margin-top: 30px;
-            padding-top: 20px;
+            margin-top: 15px;
+            padding-top: 5px;
             border-top: 1px solid #eee;
             font-size: 14px;
         }
         .funding-link {
             display: inline-block;
-            margin-top: 8px;
+            margin-top: 5px;
             padding: 8px 16px;
             background: #4caf50;
             color: white;
@@ -107,7 +125,6 @@
                 <li style="color: #b32400;">After successful flashing click the <strong>RESET</strong> button once again to launch your Coordinator.</li>
             </ol>
         </div>
-        <div id="status-text" class="status-msg"></div>
         <esp-web-install-button id="install-btn" style="display: none;"></esp-web-install-button>
         <div class="funding-box">
             <p>Enjoying the project? Support its development:</p>
@@ -178,7 +195,6 @@
             const manifest = {
                 "name": "ESP32 Zigbee Coordinator",
                 "version": currentVersion,
-                "funding_url": "https://etherscan.io/address/0x9161918687B8b849e016A137912Ae2B2D7761F21",
                 "new_install_prompt_erase": true,
                 "builds": [
                     {
