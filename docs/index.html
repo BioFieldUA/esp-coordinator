@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>'ESP32 Zigbee Coordinator Web Installer</title>
+    <title>ESP32 Zigbee Coordinator Web Installer</title>
     <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
     <style>
         body {
@@ -23,13 +23,33 @@
         select {
             width: 100%;
             padding: 10px;
-            margin: 20px 0;
+            margin: 20px 0 10px 0;
             border-radius: 4px;
             border: 1px solid #ccc;
             font-size: 16px;
         }
+        .instruction-box {
+            background: #fff9e6;
+            border-left: 4px solid #ffcc00;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+            .instruction-box strong {
+                color: #b38600;
+                display: block;
+                margin-bottom: 5px;
+                font-size: 15px;
+            }
+            .instruction-box ol {
+                margin: 0;
+                padding-left: 20px;
+            }
         esp-web-install-button {
-            margin-top: 20px;
+            margin-top: 25px;
             display: block;
         }
         .loading {
@@ -49,10 +69,20 @@
     <div class="container">
         <h1>ESP32 Zigbee Coordinator Installer</h1>
         <p>Current release version: <span id="version-text" class="loading">loading...</span></p>
-        <p>Select your board modification and click "Connect" button:</p>
+        <p>Select your board modification:</p>
         <select id="board-select" disabled>
             <option value="">Waiting for release download...</option>
         </select>
+        <div class="instruction-box">
+            <strong>⚠️ Flash Mode Activation:</strong>
+            <ol>
+                <li>Connect the board to your computer via USB.</li>
+                <li>Press and <strong>hold</strong> the <strong>BOOT</strong> button.</li>
+                <li>Click the <strong>RESET</strong> button once.</li>
+                <li>Release the <strong>BOOT</strong> button.</li>
+                <li>Now click the <strong>Connect</strong> button below to start flashing.</li>
+            </ol>
+        </div>
         <esp-web-install-button id="install-btn" style="display: none;"></esp-web-install-button>
     </div>
     <script>
@@ -76,7 +106,7 @@
                 if (!response.ok) throw new Error("Network error while requesting the GitHub API");
                 const releaseData = await response.json();
                 currentVersion = releaseData.tag_name;
-                downloadBaseUrl = `https://github.com/BioFieldUA/esp-coordinator/releases/download/{currentVersion}/`;
+                downloadBaseUrl = `https://github.com/BioFieldUA/esp-coordinator/releases/download/${currentVersion}/`;
                 versionEl.textContent = currentVersion;
                 versionEl.className = "version-badge";
                 renderSelectOptions();

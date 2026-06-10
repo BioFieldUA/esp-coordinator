@@ -21,7 +21,7 @@ namespace utils {
             ESP_LOGE(TAG, "Failed to config antenna GPIOs");
         }
 #else
-        ESP_LOGI(TAG, "Using onboard ceramic antenna.");
+        ESP_LOGI(TAG, "Using default antenna.");
 #endif
 #endif
     }
