@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ESP-Coordinator Web Installer</title>
+    <title>'ESP32 Zigbee Coordinator Web Installer</title>
     <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
     <style>
         body {
@@ -10,6 +10,7 @@
             text-align: center;
             padding: 50px;
             background: #f5f5f5;
+            color: #333;
         }
         .container {
             max-width: 500px;
@@ -19,13 +20,122 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+        select {
+            width: 100%;
+            padding: 10px;
+            margin: 20px 0;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+        esp-web-install-button {
+            margin-top: 20px;
+            display: block;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .version-badge {
+            background: #e0e0e0;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>ESP32-C5 / ESP32-C6 Installer</h1>
-        <p>Connect your ESP32 via USB and click the button below to flash.</p>
-        <esp-web-install-button manifest="manifest.json"></esp-web-install-button>
+        <h1>ESP32 Zigbee Coordinator Installer</h1>
+        <p>Current release version: <span id="version-text" class="loading">loading...</span></p>
+        <p>Select your board modification and click "Connect" button:</p>
+        <select id="board-select" disabled>
+            <option value="">Waiting for release download...</option>
+        </select>
+        <esp-web-install-button id="install-btn" style="display: none;"></esp-web-install-button>
     </div>
+    <script>
+        const apiUrl = "https://api.github.com/repos/BioFieldUA/esp-coordinator/releases/latest";
+        const selectEl = document.getElementById('board-select');
+        const buttonEl = document.getElementById('install-btn');
+        const versionEl = document.getElementById('version-text');
+        let currentVersion = "";
+        let downloadBaseUrl = "";
+        const boardTemplates = [
+            { chip: "ESP32-C5", name: "ESP32-C5 (USB Interface)", fileSuffix: "esp32c5-usb" },
+            { chip: "ESP32-C5", name: "ESP32-C5 (UART Interface)", fileSuffix: "esp32c5-uart" },
+            { chip: "ESP32-C6", name: "ESP32-C6 (USB + Ceramic Antenna)", fileSuffix: "esp32c6-usb-ceramic" },
+            { chip: "ESP32-C6", name: "ESP32-C6 (USB + External Antenna)", fileSuffix: "esp32c6-usb-external" },
+            { chip: "ESP32-C6", name: "ESP32-C6 (UART + Ceramic Antenna)", fileSuffix: "esp32c6-uart-ceramic" },
+            { chip: "ESP32-C6", name: "ESP32-C6 (UART + External Antenna)", fileSuffix: "esp32c6-uart-external" }
+        ];
+        async function initInstaller() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Network error while requesting the GitHub API");
+                const releaseData = await response.json();
+                currentVersion = releaseData.tag_name;
+                downloadBaseUrl = `https://github.com/BioFieldUA/esp-coordinator/releases/download/{currentVersion}/`;
+                versionEl.textContent = currentVersion;
+                versionEl.className = "version-badge";
+                renderSelectOptions();
+                selectEl.disabled = false;
+                buttonEl.style.display = "block";
+                updateManifest();
+            } catch (error) {
+                console.error(error);
+                versionEl.textContent = "Error while loading new release version";
+                versionEl.style.color = "red";
+            }
+        }
+        function renderSelectOptions() {
+            selectEl.innerHTML = "";
+            const groups = {};
+            boardTemplates.forEach(item => {
+                if (!groups[item.chip]) groups[item.chip] = [];
+                groups[item.chip].push(item);
+            });
+            for (const chip in groups) {
+                const groupEl = document.createElement('optgroup');
+                groupEl.label = chip;
+                groups[chip].forEach(board => {
+                    const option = document.createElement('option');
+                    const fileName = `esp-coordinator-${board.fileSuffix}-${currentVersion}-factory.bin`;
+                    option.value = `${board.chip}|${fileName}`;
+                    option.textContent = board.name;
+                    groupEl.appendChild(option);
+                });
+                selectEl.appendChild(groupEl);
+            }
+        }
+        function updateManifest() {
+            if (!selectEl.value) return;
+            const [chipFamily, fileName] = selectEl.value.split('|');
+            const fullBinPath = downloadBaseUrl + fileName;
+            const manifest = {
+                "name": "ESP32 Zigbee Coordinator",
+                "version": currentVersion,
+                "funding_url": "https://etherscan.io/address/0x9161918687B8b849e016A137912Ae2B2D7761F21",
+                "new_install_prompt_erase": true,
+                "builds": [
+                    {
+                        "chipFamily": chipFamily,
+                        "parts": [
+                            { "path": fullBinPath, "offset": 0 }
+                        ]
+                    }
+                ]
+            };
+            const json = JSON.stringify(manifest);
+            const blob = new Blob([json], { type: "application/json" });
+            if (buttonEl.manifest) {
+                URL.revokeObjectURL(buttonEl.manifest);
+            }
+            buttonEl.manifest = URL.createObjectURL(blob);
+        }
+        selectEl.addEventListener('change', updateManifest);
+        initInstaller();
+    </script>
 </body>
 </html>
