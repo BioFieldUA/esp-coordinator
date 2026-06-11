@@ -110,4 +110,4 @@ jobs:
         git config --global user.email 'github-actions-bot@github.com'
         git add docs/firmware/
         git commit -m "Automated update of firmware binaries" || echo "No changes to commit"
-        git push origin master
+        git push origin ${{ github.ref_name }}
