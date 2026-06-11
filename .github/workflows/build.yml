@@ -6,7 +6,7 @@ on:
     inputs:
       version:
         description: 'Enter the Firmware Version (e.g. v1.0.7.3)'
-        required: false
+        required: true
         default: 'v1.0.0.0'
         type: string
 permissions:
@@ -60,18 +60,28 @@ jobs:
           TAG_NAME="${{ github.event.release.tag_name }}"
         fi
         if [ "${{ matrix.chip }}" = "esp32c6" ]; then
-          BIN_NAME="esp-coordinator-esp32c6-${{ matrix.transport }}-${{ matrix.antenna }}-${TAG_NAME}-factory.bin"
+          BOOT_OFFSET="0x0"
+          BIN_NAME="esp-coordinator-esp32c6-${{ matrix.transport }}-${{ matrix.antenna }}-${TAG_NAME}"
+        elif [ "${{ matrix.chip }}" = "esp32c5" ]; then
+          BOOT_OFFSET="0x2000"
+          BIN_NAME="esp-coordinator-esp32c5-${{ matrix.transport }}-${TAG_NAME}"
         else
-          BIN_NAME="esp-coordinator-esp32c5-${{ matrix.transport }}-${TAG_NAME}-factory.bin"
+          BOOT_OFFSET="0x0"
+          BIN_NAME="esp-coordinator-${{ matrix.chip }}-${{ matrix.transport }}-${TAG_NAME}"
         fi
-        esptool.py --chip ${{ matrix.chip }} merge_bin \
-          -o "$BIN_NAME" \
-          --flash_mode dio --flash_freq 80m --flash_size 4MB \
-          0x0 build/bootloader/bootloader.bin \
+        esptool.py --chip ${{ matrix.chip }} --before=default_reset --after=hard_reset \
+          merge_bin -o "${BIN_NAME}-factory.bin" \
+          $BOOT_OFFSET build/bootloader/bootloader.bin \
           0x8000 build/partition_table/partition-table.bin \
           0x3d000 build/ota_data_initial.bin \
           0x3f000 build/phy_init_data.bin \
           0x40000 build/esp-coordinator.bin
+        cp build/esp-coordinator.bin "${BIN_NAME}-update.bin"
+    - name: Upload binaries to workspace artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-${{ matrix.chip }}-${{ matrix.transport }}-${{ matrix.antenna }}
+        path: esp-coordinator-*.bin
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v2
       if: github.event_name == 'release'
@@ -79,3 +89,25 @@ jobs:
         files: |
           esp-coordinator-*.bin
           *.zigbee
+  deploy-to-web:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+    - name: Clear web folder
+      run: |
+        mkdir -p docs/firmware
+        rm -rf docs/firmware/*
+    - name: Download all workspace artifacts to web folder
+      uses: actions/download-artifact@v4
+      with:
+        path: docs/firmware
+        merge-multiple: true
+    - name: Commit and Push to GitHub
+      run: |
+        git config --global user.name 'GitHub Actions Bot'
+        git config --global user.email 'github-actions-bot@github.com'
+        git add docs/firmware/
+        git commit -m "Automated update of firmware binaries" || echo "No changes to commit"
+        git push origin master
