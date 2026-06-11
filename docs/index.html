@@ -3,116 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <title>ESP32 Zigbee Coordinator Web Installer</title>
+    <link rel="stylesheet" href="index.css">
     <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
-    <style>
-        body {
-            font-family: sans-serif;
-            text-align: center;
-            padding: 50px;
-            background: #f5f5f5;
-            color: #333;
-        }
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-            .container h1 {
-                display: block;
-                font-size: 32px;
-                margin-block-start: 0px;
-                margin-block-end: 6px;
-                margin-inline-start: 0px;
-                margin-inline-end: 0px;
-            }
-            .container p {
-                display: block;
-                font-size: 16px;
-                margin-block-start: 8px;
-                margin-block-end: 8px;
-                margin-inline-start: 0px;
-                margin-inline-end: 0px;
-            }
-        select {
-            width: 100%;
-            padding: 8px;
-            margin: 0;
-            border-radius: 4px;
-            border: 2px solid #4caf50;
-            font-size: 16px;
-        }
-            select:focus {
-                border: 2px solid #4caf50;
-            }
-            select:focus-visible {
-                border: 2px solid #4caf50;
-            }
-        .instruction-box {
-            background: #fff9e6;
-            border-left: 4px solid #ffcc00;
-            padding: 15px;
-            margin: 20px 0;
-            text-align: left;
-            border-radius: 4px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .instruction-title {
-            color: #b38600;
-            font-weight: bold;
-            margin-bottom: 8px;
-            font-size: 15px;
-        }
-        .instruction-box ol {
-            margin: 0;
-            padding-left: 20px;
-        }
-            .instruction-box ol li strong {
-                display: inline;
-                color: #000;
-            }
-        esp-web-install-button {
-            display: block;
-        }
-        .loading {
-            color: #666;
-            font-style: italic;
-        }
-        .version-badge {
-            background: #e0e0e0;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .funding-box {
-            margin-top: 15px;
-            padding-top: 5px;
-            border-top: 1px solid #eee;
-            font-size: 14px;
-        }
-        .funding-link {
-            display: inline-block;
-            margin-top: 5px;
-            padding: 8px 16px;
-            background: #4caf50;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-            .funding-link:hover {
-                background: #43a047;
-            }
-    </style>
 </head>
 <body>
     <div class="container">
         <h1>ESP32 Zigbee Coordinator Installer</h1>
         <p>Current release version: <span id="version-text" class="loading">loading...</span></p>
+        <div class="mode-container">
+            <label class="mode-option">
+                <input type="radio" name="flash-mode" value="update" disabled>
+                <div class="mode-text">
+                    <strong>Keep Settings</strong>
+                    <span>Safe update. Your existing Zigbee network and all device connections will not be touched.</span>
+                </div>
+            </label>
+            <div class="separetor"></div>
+            <label class="mode-option">
+                <input type="radio" name="flash-mode" value="factory" disabled>
+                <div class="mode-text">
+                    <strong>Factory Reset</strong>
+                    <span>Initial clean install. Wipes the chip completely. You will need to pair all Zigbee devices again.</span>
+                </div>
+            </label>
+        </div>
         <p>Select your ESP32-board modification:</p>
         <select id="board-select" disabled>
             <option value="">Waiting for release download...</option>
@@ -128,7 +42,9 @@
                 <li style="color: #b32400;">After successful flashing click the <strong>RESET</strong> button once again to launch your Coordinator.</li>
             </ol>
         </div>
-        <esp-web-install-button id="install-btn" style="display: none;"></esp-web-install-button>
+        <div id="install-btn-box">
+            <esp-web-install-button id="install-btn"></esp-web-install-button>
+        </div>
         <div class="funding-box">
             <p>Enjoying the project? Support its development:</p>
             <a class="funding-link" href="https://etherscan.io/address/0x9161918687B8b849e016A137912Ae2B2D7761F21" target="_blank">🥇 Support Development</a>
@@ -137,8 +53,10 @@
     <script>
         const apiUrl = "https://api.github.com/repos/BioFieldUA/esp-coordinator/releases/latest";
         const selectEl = document.getElementById('board-select');
+        const buttonBoxEl = document.getElementById('install-btn-box');
         const buttonEl = document.getElementById('install-btn');
         const versionEl = document.getElementById('version-text');
+        const modeRadioEls = document.querySelectorAll('input[name="flash-mode"]');
         const boardTemplates = [
             { chip: "ESP32-C5", name: "ESP32-C5 (USB Interface)", fileSuffix: "esp32c5-usb" },
             { chip: "ESP32-C5", name: "ESP32-C5 (UART Interface)", fileSuffix: "esp32c5-uart" },
@@ -154,13 +72,17 @@
                 if (!response.ok) throw new Error("Network error while requesting the GitHub API");
                 const releaseData = await response.json();
                 currentVersion = releaseData.tag_name;
-                releaseAssets = releaseData.assets;
                 versionEl.textContent = currentVersion;
                 versionEl.className = "version-badge";
+                modeRadioEls.forEach(radio => {
+                    radio.disabled = false;
+                    if (radio.value === "update") radio.checked = true;
+                });
                 renderSelectOptions();
+                selectEl.className = "select-green";
                 selectEl.disabled = false;
-                buttonEl.style.display = "block";
-                await updateManifest();
+                buttonBoxEl.style.display = "block";
+                updateManifest();
             } catch (error) {
                 console.error(error);
                 versionEl.textContent = "Firmware is missing";
@@ -179,8 +101,7 @@
                 groupEl.label = chip;
                 groups[chip].forEach(board => {
                     const option = document.createElement('option');
-                    const fileName = `firmware/esp-coordinator-${board.fileSuffix}-${currentVersion}-factory.bin`;
-                    option.value = `${board.chip}|${fileName}`;
+                    option.value = `${board.chip}|${board.fileSuffix}`;
                     option.textContent = board.name;
                     groupEl.appendChild(option);
                 });
@@ -189,22 +110,33 @@
         }
         function updateManifest() {
             if (!selectEl.value) return;
-            const [chipFamily, binPath] = selectEl.value.split('|');
+            const [chipFamily, fileSuffix] = selectEl.value.split('|');
+            const selectedMode = document.querySelector('input[name="flash-mode"]:checked').value;
             let basePath = window.location.origin + window.location.pathname;
             if (!basePath.endsWith('/')) {
                 basePath += '/';
             }
-            const absolutePath = basePath + binPath;
+            let partsConfig = [];
+            if (selectedMode === "factory") {
+                const fileName = `firmware/esp-coordinator-${fileSuffix}-${currentVersion}-factory.bin`;
+                partsConfig = [
+                    { "path": basePath + fileName, "offset": 0 }
+                ];
+            } else {
+                const fileName = `firmware/esp-coordinator-${fileSuffix}-${currentVersion}-update.bin`;
+                partsConfig = [
+                    { "path": basePath + fileName, "offset": 262144 },
+                    { "path": basePath + fileName, "offset": 1572864 }
+                ];
+            }
             const manifest = {
                 "name": "ESP32 Zigbee Coordinator",
                 "version": currentVersion,
-                "new_install_prompt_erase": true,
+                "new_install_prompt_erase": (selectedMode === "factory"),
                 "builds": [
                     {
                         "chipFamily": chipFamily,
-                        "parts": [
-                            { "path": absolutePath, "offset": 0 }
-                        ]
+                        "parts": partsConfig
                     }
                 ]
             };
@@ -216,6 +148,7 @@
             buttonEl.manifest = URL.createObjectURL(blob);
         }
         selectEl.addEventListener('change', updateManifest);
+        modeRadioEls.forEach(radio => radio.addEventListener('change', updateManifest));
         initInstaller();
     </script>
 </body>
