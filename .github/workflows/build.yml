@@ -93,8 +93,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repo
+    - name: Checkout master branch
       uses: actions/checkout@v4
+      with:
+        ref: master
+        fetch-depth: 0
     - name: Clear web folder
       run: |
         mkdir -p docs/firmware
@@ -110,4 +113,4 @@ jobs:
         git config --global user.email 'github-actions-bot@github.com'
         git add docs/firmware/
         git commit -m "Automated update of firmware binaries" || echo "No changes to commit"
-        git push origin ${{ github.ref_name }}
+        git push origin master
