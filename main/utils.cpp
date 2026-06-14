@@ -1,29 +1,74 @@
 #include "utils.h"
+#include "esp_log.h"
 #include "driver/gpio.h"
+#include "esp_phy.h"
 #include "statuses.h"
 
 namespace utils {
 
     void init_external_antenna(const char* TAG) {
-#if defined(CONFIG_IDF_TARGET_ESP32C6)
-#ifdef CONFIG_NCP_EXTERNAL_ANTENNA
+#if defined(CONFIG_NCP_EXTERNAL_ANTENNA)
+#if CONFIG_NCP_ANTENNA_SWITCH_PIN >= 0
+#define ANT_SWITCH_PIN  CONFIG_NCP_ANTENNA_SWITCH_PIN
+#elif defined(WIFI_ANT_CONFIG)
+#define ANT_SWITCH_PIN  WIFI_ANT_CONFIG
+#endif
+#if defined(ANT_SWITCH_PIN)
+#if defined(CONFIG_IDF_TARGET_ESP32C5)
+        esp_phy_ant_gpio_config_t ant_gpio = {};
+        ant_gpio.gpio_cfg[0].gpio_select = 1;
+        ant_gpio.gpio_cfg[0].gpio_num = static_cast<uint8_t>(ANT_SWITCH_PIN);
+        esp_err_t err = esp_phy_set_ant_gpio(&ant_gpio);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to set PHY antenna GPIO config (error: %s)", esp_err_to_name(err));
+            return;
+        }
+        esp_phy_ant_config_t ant_config = {
+            .rx_ant_mode = ESP_PHY_ANT_MODE_ANT1,
+            .rx_ant_default = ESP_PHY_ANT_ANT1,
+            .tx_ant_mode = ESP_PHY_ANT_MODE_ANT1,
+            .enabled_ant0 = 0,
+            .enabled_ant1 = 1
+        };
+        err = esp_phy_set_ant(&ant_config);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to set PHY antenna mode (error: %s)", esp_err_to_name(err));
+            return;
+        }
+        ESP_LOGI(TAG, "PHY Antenna successfully locked to external (ANT1) via GPIO: %d", ANT_SWITCH_PIN);
+#else
+#if CONFIG_NCP_ANTENNA_CONTROLLER_ENABLE_PIN >= 0
+#define ANT_ENABLE_PIN  CONFIG_NCP_ANTENNA_CONTROLLER_ENABLE_PIN
+#elif defined(WIFI_ENABLE)
+#define ANT_ENABLE_PIN  WIFI_ENABLE
+#endif
+#if defined(ANT_ENABLE_PIN)
         gpio_config_t io_conf = {};
         io_conf.mode = GPIO_MODE_OUTPUT;
-        io_conf.pin_bit_mask = (1ULL << GPIO_NUM_3) | (1ULL << GPIO_NUM_14);
+        io_conf.pin_bit_mask = (1ULL << ANT_ENABLE_PIN) | (1ULL << ANT_SWITCH_PIN);
         io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
         io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
         io_conf.intr_type = GPIO_INTR_DISABLE;
-        if (gpio_config(&io_conf) == ESP_OK) {
-            gpio_set_level(GPIO_NUM_3, 0);  // Enable RF Switch (LOW)
-            gpio_set_level(GPIO_NUM_14, 1); // Select External Antenna (HIGH)
-            ESP_LOGI(TAG, "External antenna active.");
-        } else {
-            ESP_LOGE(TAG, "Failed to config antenna GPIOs");
+        esp_err_t err = gpio_config(&io_conf);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to config antenna GPIOs (error: %s)", esp_err_to_name(err));
+            return;
         }
+        gpio_set_level(static_cast<gpio_num_t>(ANT_ENABLE_PIN), 0);     // Enable RF Switch (LOW)
+        gpio_set_level(static_cast<gpio_num_t>(ANT_SWITCH_PIN), 1);     // Select External Antenna (HIGH)
+        ESP_LOGI(TAG, "External antenna active. RF Switch pin: %d, Antenna pin: %d", ANT_ENABLE_PIN, ANT_SWITCH_PIN);
+#undef ANT_ENABLE_PIN
+#else
+        ESP_LOGI(TAG, "External antenna requested, but no control hardware pins are defined.");
+#endif
+#endif
+#undef ANT_SWITCH_PIN
+#else
+        ESP_LOGI(TAG, "External antenna requested, but antenna switch pin is not specified.");
+#endif /* ANT_SWITCH_PIN */
 #else
         ESP_LOGI(TAG, "Using default antenna.");
-#endif
-#endif
+#endif /* CONFIG_NCP_EXTERNAL_ANTENNA */
     }
 
     void reverse_ieee_addr(zb_ieee_addr_t addr) {

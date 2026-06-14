@@ -45,17 +45,20 @@ def get_hv_from_sdkconfig():
         print(f"ERROR: Configuration file not found at: {CONFIG_FILE}")
         sys.exit(1)
     flags = {
+        "CONFIG_IDF_TARGET_ESP32H2": False,
         "CONFIG_IDF_TARGET_ESP32C5": False,
         "CONFIG_IDF_TARGET_ESP32C6": False,
         "CONFIG_NCP_EXTERNAL_ANTENNA": False,
         "CONFIG_NCP_BUS_MODE_UART": False,
         "CONFIG_NCP_BUS_MODE_USB": False
     }
-    HW_CHIP_ESP32C5         = 0x0500
-    HW_CHIP_ESP32C6_CERAMIC = 0x0600
-    HW_CHIP_ESP32C6_EXT     = 0x0610
-    HW_BUS_UART             = 0x0001
-    HW_BUS_USB              = 0x0002
+    HW_CHIP_ESP32H2       = 0x0200
+    HW_CHIP_ESP32C5       = 0x0500
+    HW_CHIP_ESP32C6       = 0x0600
+    HW_ANTENNA_DEFAULT    = 0x0000
+    HW_ANTENNA_EXTERNAL   = 0x0010
+    HW_BUS_UART           = 0x0001
+    HW_BUS_USB            = 0x0002
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -64,16 +67,20 @@ def get_hv_from_sdkconfig():
                 config_name = match.group(1)
                 if config_name in flags:
                     flags[config_name] = True
-    if flags["CONFIG_IDF_TARGET_ESP32C5"]:
+                    
+    if flags["CONFIG_IDF_TARGET_ESP32H2"]:
+        chip_mask = HW_CHIP_ESP32H2
+    elif flags["CONFIG_IDF_TARGET_ESP32C5"]:
         chip_mask = HW_CHIP_ESP32C5
     elif flags["CONFIG_IDF_TARGET_ESP32C6"]:
-        if flags["CONFIG_NCP_EXTERNAL_ANTENNA"]:
-            chip_mask = HW_CHIP_ESP32C6_EXT
-        else:
-            chip_mask = HW_CHIP_ESP32C6_CERAMIC
+        chip_mask = HW_CHIP_ESP32C6
     else:
         print("ERROR: Unsupported or missing CONFIG_IDF_TARGET in sdkconfig")
         sys.exit(1)
+    if flags["CONFIG_NCP_EXTERNAL_ANTENNA"]:
+        ant_mask = HW_ANTENNA_EXTERNAL
+    else:
+        ant_mask = HW_ANTENNA_DEFAULT
     if flags["CONFIG_NCP_BUS_MODE_UART"]:
         bus_mask = HW_BUS_UART
     elif flags["CONFIG_NCP_BUS_MODE_USB"]:
@@ -81,7 +88,7 @@ def get_hv_from_sdkconfig():
     else:
         print("ERROR: No valid NCP bus mode (UART/USB) defined in sdkconfig")
         sys.exit(1)
-    return (chip_mask | bus_mask)
+    return (chip_mask | ant_mask | bus_mask)
 
 def main():
     ver_text, file_version_uint32 = get_version_from_cmake()

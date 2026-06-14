@@ -86,7 +86,7 @@ esp_err_t app::run() {
 }
 
 esp_err_t app::start() {
-    utils::init_external_antenna(TAG);
     ESP_LOGI(TAG, "Starting ZB Coordinator Version: %d.%d.%d.%d", (PROJECT_VER_UINT32 >> 24) & 0xFF, (PROJECT_VER_UINT32 >> 16) & 0xFF, (PROJECT_VER_UINT32 >> 8) & 0xFF, PROJECT_VER_UINT32 & 0xFF);
+    utils::init_external_antenna(TAG);
     return instance().run();
 }

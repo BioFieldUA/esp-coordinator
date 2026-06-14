@@ -3,6 +3,7 @@
 #include <cstring>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+#include "board_pins.h"
 #include "zboss_decl.h"
 
 #define IEEE_ADDR_FMT "%02x %02x %02x %02x %02x %02x %02x %02x"

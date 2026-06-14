@@ -58,12 +58,16 @@
         const versionEl = document.getElementById('version-text');
         const modeRadioEls = document.querySelectorAll('input[name="flash-mode"]');
         const boardTemplates = [
-            { chip: "ESP32-C5", name: "ESP32-C5 (USB Interface)", fileSuffix: "esp32c5-usb" },
-            { chip: "ESP32-C5", name: "ESP32-C5 (UART Interface)", fileSuffix: "esp32c5-uart" },
-            { chip: "ESP32-C6", name: "ESP32-C6 (USB + Ceramic Antenna)", fileSuffix: "esp32c6-usb-ceramic" },
-            { chip: "ESP32-C6", name: "ESP32-C6 (USB + External Antenna)", fileSuffix: "esp32c6-usb-external" },
-            { chip: "ESP32-C6", name: "ESP32-C6 (UART + Ceramic Antenna)", fileSuffix: "esp32c6-uart-ceramic" },
-            { chip: "ESP32-C6", name: "ESP32-C6 (UART + External Antenna)", fileSuffix: "esp32c6-uart-external" }
+            { chip: "ESP32-C5", name: "ESP32-C5 (USB + Default Antenna)", fileSuffix: "esp32c5-usb-ceramic" },
+            { chip: "ESP32-C5", name: "ESP32-C5 (UART + Default Antenna)", fileSuffix: "esp32c5-uart-ceramic" },
+            { chip: "ESP32-C5", name: "ESP32-C5-Zero (USB + External Antenna)", fileSuffix: "esp32c5-usb-external" },
+            { chip: "ESP32-C5", name: "ESP32-C5-Zero (UART + External Antenna)", fileSuffix: "esp32c5-uart-external" },
+            { chip: "ESP32-C6", name: "ESP32-C6 (USB + Default Antenna)", fileSuffix: "esp32c6-usb-ceramic" },
+            { chip: "ESP32-C6", name: "ESP32-C6 (UART + Default Antenna)", fileSuffix: "esp32c6-uart-ceramic" },
+            { chip: "ESP32-C6", name: "ESP32-C6 XIAO (USB + External Antenna)", fileSuffix: "esp32c6-usb-external" },
+            { chip: "ESP32-C6", name: "ESP32-C6 XIAO (UART + External Antenna)", fileSuffix: "esp32c6-uart-external" },
+            { chip: "ESP32-C6", name: "ESP32-H2 (USB + Default Antenna)", fileSuffix: "esp32h2-usb-ceramic" },
+            { chip: "ESP32-C6", name: "ESP32-H2 (UART + Default Antenna)", fileSuffix: "esp32h2-uart-ceramic" }
         ];
         let currentVersion = "";
         async function initInstaller() {

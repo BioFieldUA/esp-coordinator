@@ -23,8 +23,14 @@ jobs:
             transport: usb
             antenna: ceramic
           - chip: esp32c5
+            transport: usb
+            antenna: external
+          - chip: esp32c5
             transport: uart
             antenna: ceramic
+          - chip: esp32c5
+            transport: uart
+            antenna: external
           - chip: esp32c6
             transport: usb
             antenna: ceramic
@@ -37,6 +43,12 @@ jobs:
           - chip: esp32c6
             transport: uart
             antenna: external
+          - chip: esp32h2
+            transport: usb
+            antenna: ceramic
+          - chip: esp32h2
+            transport: uart
+            antenna: ceramic
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
@@ -59,15 +71,12 @@ jobs:
         else
           TAG_NAME="${{ github.event.release.tag_name }}"
         fi
-        if [ "${{ matrix.chip }}" = "esp32c6" ]; then
-          BOOT_OFFSET="0x0"
-          BIN_NAME="esp-coordinator-esp32c6-${{ matrix.transport }}-${{ matrix.antenna }}-${TAG_NAME}"
-        elif [ "${{ matrix.chip }}" = "esp32c5" ]; then
+        if [ "${{ matrix.chip }}" = "esp32c5" ]; then
           BOOT_OFFSET="0x2000"
-          BIN_NAME="esp-coordinator-esp32c5-${{ matrix.transport }}-${TAG_NAME}"
+          BIN_NAME="esp-coordinator-esp32c5-${{ matrix.transport }}-${{ matrix.antenna }}-${TAG_NAME}"
         else
           BOOT_OFFSET="0x0"
-          BIN_NAME="esp-coordinator-${{ matrix.chip }}-${{ matrix.transport }}-${TAG_NAME}"
+          BIN_NAME="esp-coordinator-${{ matrix.chip }}-${{ matrix.transport }}-${{ matrix.antenna }}-${TAG_NAME}"
         fi
         esptool.py --chip ${{ matrix.chip }} --before=default_reset --after=hard_reset \
           merge_bin -o "${BIN_NAME}-factory.bin" \

@@ -522,7 +522,6 @@ template <> struct zb_ncp::cmd_handle<NCP_RESET> :
             zb_bdb_reset_via_local_action(0);
             zb_nvram_erase();
             storage::delete_config();
-            // storage::format();
             break;
         case 3: // LockReadingKeys
             ESP_LOGI(TAG, "Disable Unsecure Trust Center Rejoin");

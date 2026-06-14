@@ -25,7 +25,7 @@ transport::transport() {
     uart_config_t uart_config = {
         .baud_rate = CONFIG_NCP_BUS_UART_BAUD_RATE,
         .data_bits = static_cast<uart_word_length_t>(CONFIG_NCP_BUS_UART_BYTE_SIZE),
-        .parity = UART_PARITY_DISABLE,
+        .parity = static_cast<uart_parity_t>(CONFIG_NCP_BUS_UART_PARITY),
         .stop_bits = static_cast<uart_stop_bits_t>(CONFIG_NCP_BUS_UART_STOP_BITS),
         .flow_ctrl = static_cast<uart_hw_flowcontrol_t>(CONFIG_NCP_BUS_UART_FLOW_CONTROL),
         .rx_flow_ctrl_thresh = static_cast<uint8_t>((CONFIG_NCP_BUS_UART_FLOW_CONTROL & 1) ? 122 : 0),
@@ -37,7 +37,13 @@ transport::transport() {
     };
     ret = uart_driver_install(UART_PORT_NUM, BUF_SIZE, BUF_SIZE, 32, &m_uart_queue, 0);
     if (ret == ESP_OK) ret = uart_param_config(UART_PORT_NUM, &uart_config);
-    if (ret == ESP_OK) ret = uart_set_pin(UART_PORT_NUM, CONFIG_NCP_BUS_UART_TX_PIN, CONFIG_NCP_BUS_UART_RX_PIN, CONFIG_NCP_BUS_UART_RTS_PIN, CONFIG_NCP_BUS_UART_CTS_PIN);
+    if (ret == ESP_OK) ret = uart_set_pin(
+        UART_PORT_NUM,
+        (CONFIG_NCP_BUS_UART_TX_PIN < 0) ? TX : CONFIG_NCP_BUS_UART_TX_PIN,
+        (CONFIG_NCP_BUS_UART_RX_PIN < 0) ? RX : CONFIG_NCP_BUS_UART_RX_PIN,
+        CONFIG_NCP_BUS_UART_RTS_PIN,
+        CONFIG_NCP_BUS_UART_CTS_PIN
+    );
 #elif defined(CONFIG_NCP_BUS_MODE_USB)
     usb_serial_jtag_driver_config_t usb_config = {
         .tx_buffer_size = BUF_SIZE,

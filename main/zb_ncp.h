@@ -27,22 +27,28 @@ extern "C" {
 #define OTA_MAX_DATA_SIZE           82
 #define OTA_IMAGE_HEADER_LEN        66
 #define OTA_IMAGE_TYPE              0x0001 // A custom Device Type = ZB_Coordinator
+#define _HW_CHIP_ESP32H2            0x0200
 #define _HW_CHIP_ESP32C5            0x0500
-#define _HW_CHIP_ESP32C6_CERAMIC    0x0600
-#define _HW_CHIP_ESP32C6_EXT        0x0610
+#define _HW_CHIP_ESP32C6            0x0600
+#define _HW_ANTENNA_DEFAULT         0x0000
+#define _HW_ANTENNA_EXTERNAL        0x0010
 #define _HW_BUS_UART                0x0001
 #define _HW_BUS_USB                 0x0002
 
 #if defined(CONFIG_IDF_TARGET_ESP32C5)
 #define _CURRENT_HW_CHIP            _HW_CHIP_ESP32C5
 #elif defined(CONFIG_IDF_TARGET_ESP32C6)
-#if defined(CONFIG_NCP_EXTERNAL_ANTENNA)
-#define _CURRENT_HW_CHIP            _HW_CHIP_ESP32C6_EXT
-#else
-#define _CURRENT_HW_CHIP            _HW_CHIP_ESP32C6_CERAMIC
-#endif
+#define _CURRENT_HW_CHIP            _HW_CHIP_ESP32C6
+#elif defined(CONFIG_IDF_TARGET_ESP32H2)
+#define _CURRENT_HW_CHIP            _HW_CHIP_ESP32H2
 #else
 #error "Unsupported ESP32 chip"
+#endif
+
+#if defined(CONFIG_NCP_EXTERNAL_ANTENNA)
+#define _CURRENT_HW_ANT             _HW_ANTENNA_EXTERNAL
+#else
+#define _CURRENT_HW_ANT             _HW_ANTENNA_DEFAULT
 #endif
 
 #if defined(CONFIG_NCP_BUS_MODE_UART)
@@ -53,7 +59,9 @@ extern "C" {
 #error "Unsupported transport"
 #endif
 
-#define OTA_HARDWARE_VERSION        (_CURRENT_HW_CHIP | _CURRENT_HW_BUS) // A custom firmware version depends on the ESP32 board (С5, С6) and the connection interface (USB, UART).
+/** A custom firmware version depends on the ESP32-board and the connection interface (USB, UART).
+ */
+#define OTA_HARDWARE_VERSION        (_CURRENT_HW_CHIP | _CURRENT_HW_ANT | _CURRENT_HW_BUS)
 
 #define ZB_APS_FRAME_DATA           0U
 #define ZB_APS_FRAME_COMMAND        1U
