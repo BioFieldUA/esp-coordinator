@@ -78,13 +78,17 @@ jobs:
           BOOT_OFFSET="0x0"
           BIN_NAME="esp-coordinator-${{ matrix.chip }}-${{ matrix.transport }}-${{ matrix.antenna }}-${TAG_NAME}"
         fi
+        MERGE_ARGS=(
+          "${BOOT_OFFSET}" "build/bootloader/bootloader.bin"
+          "0x8000" "build/partition_table/partition-table.bin"
+          "0x3d000" "build/ota_data_initial.bin"
+        )
+        if [ -f "build/phy_init_data.bin" ]; then
+          MERGE_ARGS+=("0x3f000" "build/phy_init_data.bin")
+        fi
+        MERGE_ARGS+=("0x40000" "build/esp-coordinator.bin")
         esptool.py --chip ${{ matrix.chip }} --before=default_reset --after=hard_reset \
-          merge_bin -o "${BIN_NAME}-factory.bin" \
-          $BOOT_OFFSET build/bootloader/bootloader.bin \
-          0x8000 build/partition_table/partition-table.bin \
-          0x3d000 build/ota_data_initial.bin \
-          0x3f000 build/phy_init_data.bin \
-          0x40000 build/esp-coordinator.bin
+          merge_bin -o "${BIN_NAME}-factory.bin" "${MERGE_ARGS[@]}"
         cp build/esp-coordinator.bin "${BIN_NAME}-update.bin"
     - name: Upload binaries to workspace artifacts
       uses: actions/upload-artifact@v4
