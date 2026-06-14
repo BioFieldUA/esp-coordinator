@@ -67,7 +67,7 @@ advanced:
 ```
 
 ### 🔍 How to Find Your **Persistent ID** for USB connection on Linux
-To find the exact string for the `/dev/serial/by-id/` path, connect your ESP32 via USB and run the following command in your Linux terminal:
+To find the exact string for the `/dev/serial/by-id/` path, connect your ESP32-board via USB and run the following command in your Linux terminal:
 ```bash
 ls -l /dev/serial/by-id/
 ```
@@ -78,17 +78,17 @@ lrwxrwxrwx 1 root root 13 Jun 14 18:31 usb-Espressif_USB_JTAG_serial_debug_unit_
 Just copy the entire filename (e.g., `usb-Espressif_USB_JTAG_serial_debug_unit_38:8D:B3:A1:56:DC-if00`) and append it to `/dev/serial/by-id/` inside your `configuration.yaml`.
 
 ### 📋 Selecting the Correct Serial Port (`port:`)
-The correct port depends entirely on how you connected the ESP32 chip to your host system (e.g., Raspberry Pi, Orange Pi, or PC):
+The correct port depends entirely on how you connected the ESP32-board to your host system (e.g., Raspberry Pi, Orange Pi, or PC):
 
 | Connection Type | Port Example Syntax | Description |
 | :--- | :--- | :--- |
 | **Direct USB (Native)** | `/dev/ttyACM0` | Standard virtual COM port when using the native ESP32 USB-JTAG/Serial interface. |
 | **Direct USB (Persistent ID)** | `/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_XXXXXX` | **Recommended for USB!** Keeps the port identical even after host reboots. Replace `XXXXXX` with your chip's specific MAC-suffix. |
-| **Direct Hardware UART** | `/dev/ttyS2` (or `/dev/ttyS1`, `/dev/ttyAMA0`) | Used when connecting the host's hardware UART lines directly to the ESP32-board RX/TX pins. |
+| **Direct Hardware UART** | `/dev/ttyS2` (or `/dev/ttyS1`, `/dev/ttyAMA0`) | Used when connecting the host's hardware UART lines directly to the ESP32-board UART RX/TX pins. |
 | **Windows Users** | `COM3` or `COM5` or `COM6` | Check your Device Manager to locate the exact COM index. |
 
 ### 📌 Hardware UART Pinout (Default ESP32-board RX/TX pins)
-If you connect ESP32-Coordinator via **Direct Hardware UART** (e.g., `/dev/ttyS2` without flow control), use the following default pin map pre-configured in the firmware:
+If you connect ESP32-board via **Direct Hardware UART** (e.g., `/dev/ttyS2` without flow control), use the following default pin map pre-configured in the firmware:
 * **ESP32-C5**:
   * **TX**: `GPIO 11` ➡️ *(Connect to Host RX)*
   * **RX**: `GPIO 12` ➡️ *(Connect to Host TX)*
@@ -98,7 +98,7 @@ If you connect ESP32-Coordinator via **Direct Hardware UART** (e.g., `/dev/ttyS2
 * **ESP32-H2**:
   * **TX**: `GPIO 24` ➡️ *(Connect to Host RX)*
   * **RX**: `GPIO 23` ➡️ *(Connect to Host TX)*
-> ⚠️ **Note:** Remember that **TX goes to RX** and **RX goes to TX**. A common ground (GND) connection between the ESP32-Coordinator and your host board is strictly required.
+> ⚠️ **Note:** Remember that **TX goes to RX** and **RX goes to TX**. A common ground (GND) connection between the ESP32-board and your host board is strictly required.
 
 ---
 
