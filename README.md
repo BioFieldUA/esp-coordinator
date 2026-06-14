@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/BioFieldUA/esp-coordinator)](https://github.com/BioFieldUA/esp-coordinator/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-PolyForm_Strict_1.0.0-yellow.svg)](./LICENSE.txt)
 
-A high-performance, professional Zigbee Network Co-Processor (NCP) firmware designed for modern Espressif chips (**ESP32-C5, ESP32-C6, ESP32-H2**). This project transforms your ESP32-board into a robust Zigbee Coordinator tailored for seamless integration with **Zigbee2MQTT (Z2M)**.
+A high-performance, professional Zigbee Network Co-Processor (NCP) firmware designed for modern Espressif chips (**ESP32-C5, ESP32-C6, ESP32-H2**). This project transforms your ESP32-board into a robust **Zigbee Coordinator** tailored for seamless integration with **Zigbee2MQTT (Z2M)**.
 
 ---
 
