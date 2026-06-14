@@ -306,11 +306,13 @@ export default class OTACoordinatorExtension {
 
 ## 🔋 Green Power Devices (Kinetic Switches)
 
-This firmware includes full support for battery-free **Green Power** energy-harvesting hardware (such as the *Moes Green Power kinetic 1/2/3-gang wireless switch*). To bind and declare these custom switches, add the following handlers:
+This firmware includes full support for battery-free **Green Power** energy-harvesting hardware (such as the *Moes Green Power kinetic 1/2/3-gang wireless switch*).
+To bind and declare these custom switches, add the following handlers:
 
 ### Step 1: External Converter (Declaration)
-1. Go to **Settings** ➡️ **Dev console** ➡️ **External Converters** in Zigbee2MQTT.
-2. Create new converter:
+1. Open your Zigbee2MQTT Frontend Dashboard.
+2. Go to **Settings** ➡️ **Dev console** ➡️ **External Converters**.
+3. Create new converter:
    * **Name**: `gp_moes_switch_ext.mjs`
    * **Code**:
 ```javascript
@@ -357,11 +359,12 @@ export default {
     extend: [baseExtend],
 };
 ```
-3. Save changes.
+4. Save changes.
 
 ### Step 2: External Extension (Control Logic)
-1. Go to **Settings** ➡️ **Dev console** ➡️ **External Extensions**.
-2. Create new extension:
+1. Open your Zigbee2MQTT Frontend Dashboard.
+2. Go to **Settings** ➡️ **Dev console** ➡️ **External Extensions**.
+3. Create new extension:
    * **Name**: `gp_switch_light_ext.mjs`
    * **Code**:
 ```javascript
@@ -394,7 +397,7 @@ export default class MoesSwitchLightExtension {
     }
 };
 ```
-3. Save changes and click **Restart Zigbee2MQTT** to load both scripts.
+4. Save changes and **restart** Zigbee2MQTT to load both scripts.
 
 ---
 
@@ -407,4 +410,5 @@ If you encounter bugs, missing chip parameters, or want to suggest improvements,
 This project is licensed under the **[PolyForm Strict License 1.0.0](./LICENSE.txt)**.
 * Non-commercial use, testing, and personal research are permitted.
 * Commercial production, integration into commercial platforms, or sales require a dedicated license.
+
 For commercial inquiries, please contact: **biofield.com.ua@gmail.com**
