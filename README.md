@@ -1,9 +1,9 @@
-# ESP32-Zigbee-Coordinator (Zigbee NCP Firmware)
+# ESP32-Coordinator (Zigbee NCP Firmware)
 
 [![GitHub Release](https://img.shields.io/github/v/release/BioFieldUA/esp-coordinator)](https://github.com/BioFieldUA/esp-coordinator/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-PolyForm_Strict_1.0.0-red.svg)](./LICENSE.txt)
+[![License: MIT](https://img.shields.io/badge/License-PolyForm_Strict_1.0.0-yellow.svg)](./LICENSE.txt)
 
-A high-performance, professional Zigbee Network Co-Processor (NCP) firmware designed for modern Espressif chips (**ESP32-C5, ESP32-C6, ESP32-H2**). This project transforms your ESP32 board into a robust Zigbee coordinator tailored for seamless integration with **Zigbee2MQTT (Z2M)**.
+A high-performance, professional Zigbee Network Co-Processor (NCP) firmware designed for modern Espressif chips (**ESP32-C5, ESP32-C6, ESP32-H2**). This project transforms your ESP32-board into a robust Zigbee Coordinator tailored for seamless integration with **Zigbee2MQTT (Z2M)**.
 
 ---
 
@@ -40,7 +40,7 @@ The release page contains multiple binaries named by target parameters:
 `esp-coordinator-[CHIP]-[INTERFACE]-[ANTENNA]-[VERSION]-[TYPE].bin`
 
 * **CHIP**: `esp32c5`, `esp32c6`, or `esp32h2`.
-* **INTERFACE**: `usb` (direct USB-JTAG/Serial) or `uart` (default ESP32 RX/TX pins without rts/cts).
+* **INTERFACE**: `usb` (direct USB-JTAG/Serial) or `uart` (default ESP32-board RX/TX pins without rts/cts).
 * **ANTENNA Configurations**:
   * `ceramic` (**Default Antenna**): Select this for standard boards. It uses whatever antenna is physically hardwired (PCB trace or Ceramic antenna). No software RF-switching is executed.
   * `external` (**Software RF-Switch Enabled**): Select this **only** if your board features a dedicated software-controlled RF switch (e.g., *Seeed Studio XIAO ESP32-C6* or *Waveshare ESP32-C5-Zero*). It forces the firmware to shift RF output to the external **IPEX/u.FL** connector, while keeping the onboard antenna as default at startup.
@@ -82,11 +82,11 @@ The correct port depends entirely on how you connected the ESP32 chip to your ho
 | :--- | :--- | :--- |
 | **Direct USB (Native)** | `/dev/ttyACM0` | Standard virtual COM port when using the native ESP32 USB-JTAG/Serial interface. |
 | **Direct USB (Persistent ID)** | `/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_XXXXXX` | **Recommended for USB!** Keeps the port identical even after host reboots. Replace `XXXXXX` with your chip's specific MAC-suffix. |
-| **Direct Hardware UART** | `/dev/ttyS2` (or `/dev/ttyS1`, `/dev/ttyAMA0`) | Used when connecting the host's hardware UART lines directly to the ESP32 RX/TX pins. |
+| **Direct Hardware UART** | `/dev/ttyS2` (or `/dev/ttyS1`, `/dev/ttyAMA0`) | Used when connecting the host's hardware UART lines directly to the ESP32-board RX/TX pins. |
 | **Windows Users** | `COM3` or `COM5` or `COM6` | Check your Device Manager to locate the exact COM index. |
 
-### 📌 Hardware UART Pinout (Default ESP32 RX/TX pins)
-If you connect the Coordinator via **Direct Hardware UART** (e.g., `/dev/ttyS2` without flow control), use the following default pin map pre-configured in the firmware:
+### 📌 Hardware UART Pinout (Default ESP32-board RX/TX pins)
+If you connect ESP32-Coordinator via **Direct Hardware UART** (e.g., `/dev/ttyS2` without flow control), use the following default pin map pre-configured in the firmware:
 * **ESP32-C5**:
   * **TX**: `GPIO 11` ➡️ *(Connect to Host RX)*
   * **RX**: `GPIO 12` ➡️ *(Connect to Host TX)*
@@ -96,13 +96,13 @@ If you connect the Coordinator via **Direct Hardware UART** (e.g., `/dev/ttyS2` 
 * **ESP32-H2**:
   * **TX**: `GPIO 24` ➡️ *(Connect to Host RX)*
   * **RX**: `GPIO 23` ➡️ *(Connect to Host TX)*
-> ⚠️ **Note:** Remember that **TX goes to RX** and **RX goes to TX**. A common ground (GND) connection between the ESP32 and your host board is strictly required.
+> ⚠️ **Note:** Remember that **TX goes to RX** and **RX goes to TX**. A common ground (GND) connection between the ESP32-Coordinator and your host board is strictly required.
 
 ---
 
 ## 🔄 Zigbee2MQTT OTA Updates Integration
 
-The coordinator natively supports OTA (Over-The-Air) self-updates driven directly from the Zigbee2MQTT dashboard. To activate this feature, you must install an **External Extension**.
+ESP32-Coordinator natively supports OTA (Over-The-Air) self-updates driven directly from the Zigbee2MQTT dashboard. To activate this feature, you must install an **External Extension**.
 
 1. Open your Zigbee2MQTT Frontend Dashboard.
 2. Navigate to: **Settings** ➡️ **Dev console** ➡️ **External Extensions**.
