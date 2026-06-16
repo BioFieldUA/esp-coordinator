@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <title>ESP32 Zigbee Coordinator Web Installer</title>
     <link rel="stylesheet" href="index.css">
-    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+    <script type="importmap">
+        {
+          "imports": {
+            "esptool-js": "https://unpkg.com/esptool-js/bundle.js"
+          }
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -13,18 +19,18 @@
         <div class="mode-container">
             <label class="mode-option">
                 <input type="radio" name="flash-mode" value="update" disabled>
-                <div class="mode-text">
+                <span class="mode-text">
                     <strong>Keep Settings</strong>
                     <span>Safe update. Your existing Zigbee network and all device connections will not be touched.</span>
-                </div>
+                </span>
             </label>
             <div class="separetor"></div>
             <label class="mode-option">
                 <input type="radio" name="flash-mode" value="factory" disabled>
-                <div class="mode-text">
+                <span class="mode-text">
                     <strong>Factory Reset</strong>
                     <span>Initial clean install. Wipes the chip completely. You will need to pair all Zigbee devices again.</span>
-                </div>
+                </span>
             </label>
         </div>
         <p>Select your ESP32-board modification:</p>
@@ -38,24 +44,29 @@
                 <li>Press and <strong>hold</strong> the <strong>BOOT</strong> button.</li>
                 <li>Click the <strong>RESET</strong> button once.</li>
                 <li>Release the <strong>BOOT</strong> button.</li>
-                <li>Now click the <strong>Connect</strong> button below to start flashing.</li>
+                <li>Now click the <strong>Connect & Flash</strong> button below to start flashing.</li>
                 <li style="color: #b32400;">After successful flashing click the <strong>RESET</strong> button once again to launch your Coordinator.</li>
             </ol>
         </div>
         <div id="install-btn-box">
-            <esp-web-install-button id="install-btn"></esp-web-install-button>
+            <button id="install-btn" disabled>Connect & Flash</button>
+            <div class="terminal-box">
+                <textarea id="terminal" placeholder="Installation Log:" tabindex="-1" readonly></textarea>
+            </div>
         </div>
         <div class="funding-box">
             <p>Enjoying the project? Support its development:</p>
             <a class="funding-link" href="https://etherscan.io/address/0x9161918687B8b849e016A137912Ae2B2D7761F21" target="_blank">🥇 Support Development</a>
         </div>
     </div>
-    <script>
+    <script type="module">
+        import { ESPLoader, Transport } from "esptool-js";
         const apiUrl = "https://api.github.com/repos/BioFieldUA/esp-coordinator/releases/latest";
         const selectEl = document.getElementById('board-select');
         const buttonBoxEl = document.getElementById('install-btn-box');
         const buttonEl = document.getElementById('install-btn');
         const versionEl = document.getElementById('version-text');
+        const terminalEl = document.getElementById('terminal');
         const modeRadioEls = document.querySelectorAll('input[name="flash-mode"]');
         const boardTemplates = [
             { chip: "ESP32-C5", name: "ESP32-C5 (USB + Default Antenna)", fileSuffix: "esp32c5-usb-ceramic" },
@@ -70,6 +81,32 @@
             { chip: "ESP32-H2", name: "ESP32-H2 (UART + Default Antenna)", fileSuffix: "esp32h2-uart-ceramic" }
         ];
         let currentVersion = "";
+        let flashConfig = [];
+        const logTerminal = {
+            clean() { terminalEl.value = ""; },
+            writeLine(data) { terminalEl.value += data + "\n"; terminalEl.scrollTop = terminalEl.scrollHeight; },
+            write(data) { terminalEl.value += data; terminalEl.scrollTop = terminalEl.scrollHeight; }
+        };
+        function enableEl() {
+            modeRadioEls.forEach(radio => {
+                radio.disabled = false;
+            });
+            selectEl.disabled = false;
+            buttonEl.style.backgroundImage = "";
+            buttonEl.disabled = false;
+            buttonEl.innerText = "Connect & Flash";
+        }
+        function disableEl() {
+            modeRadioEls.forEach(radio => {
+                radio.disabled = true;
+            });
+            selectEl.disabled = true;
+            buttonEl.disabled = true;
+        }
+        function showProgress(percent) {
+            buttonEl.innerText = `${percent}%`;
+            buttonEl.style.backgroundImage = `linear-gradient(to right, #14b7ce ${percent}%, #aaa ${percent}%)`;
+        }
         async function initInstaller() {
             try {
                 const response = await fetch(apiUrl);
@@ -78,13 +115,11 @@
                 currentVersion = releaseData.tag_name;
                 versionEl.textContent = currentVersion;
                 versionEl.className = "version-badge";
+                renderSelectOptions();
                 modeRadioEls.forEach(radio => {
-                    radio.disabled = false;
                     if (radio.value === "update") radio.checked = true;
                 });
-                renderSelectOptions();
-                selectEl.className = "select-green";
-                selectEl.disabled = false;
+                enableEl();
                 buttonBoxEl.style.display = "block";
                 updateManifest();
             } catch (error) {
@@ -116,43 +151,120 @@
             if (!selectEl.value) return;
             const [chipFamily, fileSuffix] = selectEl.value.split('|');
             const selectedMode = document.querySelector('input[name="flash-mode"]:checked').value;
-            let basePath = window.location.origin + window.location.pathname;
-            if (!basePath.endsWith('/')) {
-                basePath += '/';
-            }
-            let partsConfig = [];
             if (selectedMode === "factory") {
-                const fileName = `firmware/esp-coordinator-${fileSuffix}-${currentVersion}-factory.bin`;
-                partsConfig = [
-                    { "path": basePath + fileName, "offset": 0 }
+                flashConfig = [
+                    {
+                        chip: chipFamily,
+                        isFactory: true,
+                        path: `firmware/esp-coordinator-${fileSuffix}-${currentVersion}-factory.bin`,
+                        offsets: [0x00000]
+                    }
                 ];
             } else {
-                const fileName = `firmware/esp-coordinator-${fileSuffix}-${currentVersion}-update.bin`;
-                partsConfig = [
-                    { "path": basePath + fileName, "offset": 262144 },
-                    { "path": basePath + fileName, "offset": 1572864 }
+                flashConfig = [
+                    {
+                        chip: chipFamily,
+                        isFactory: false,
+                        path: `firmware/esp-coordinator-${fileSuffix}-${currentVersion}-update.bin`,
+                        offsets: [0x40000, 0x180000]
+                    }
                 ];
             }
-            const manifest = {
-                "name": "ESP32 Zigbee Coordinator",
-                "version": currentVersion,
-                "new_install_prompt_erase": (selectedMode === "factory"),
-                "builds": [
-                    {
-                        "chipFamily": chipFamily,
-                        "parts": partsConfig
-                    }
-                ]
-            };
-            const json = JSON.stringify(manifest);
-            const blob = new Blob([json], { type: "application/json" });
-            if (buttonEl.manifest) {
-                URL.revokeObjectURL(buttonEl.manifest);
+        }
+        async function flashFirmware() {
+            logTerminal.clean();
+            if (flashConfig.length < 1) {
+                logTerminal.writeLine("[Error] No firmware configuration found. Please select your ESP32-board.");
+                return;
             }
-            buttonEl.manifest = URL.createObjectURL(blob);
+            if (!navigator.serial) {
+                logTerminal.writeLine("[Error] Web Serial API is not supported by this Browser.");
+                return;
+            }
+            disableEl();
+            let transport = null;
+            try {
+                logTerminal.writeLine("[System] Requesting serial port...");
+                const portFilters = [
+                    { usbVendorId: 0x303a }, // Espressif Systems
+                    { usbVendorId: 0x1a86 }, // WCH (Jiangsu Qinheng Co.)
+                    { usbVendorId: 0x10c4 }, // Silicon Labs
+                    { usbVendorId: 0x0403 }, // FTDI (Future Technology Devices International)
+                    { usbVendorId: 0x067b }, // Prolific Technology
+                    { usbVendorId: 0x1f3a }, // Allwinner / Onyx
+                    { usbVendorId: 0x0d28 }, // ARM mbed / DAPLink
+                    { usbVendorId: 0x1366 }, // SEGGER — J-Link
+                    { usbVendorId: 0x0483 }, // STMicroelectronics
+                    { usbVendorId: 0x2341 }, // Arduino LLC
+                    { usbVendorId: 0x16c0 }, // Van Ooijen Technology / Teensy
+                    { usbVendorId: 0x04d8 }  // Microchip Technology
+                ];
+                const port = await navigator.serial.requestPort({ filters: portFilters });
+                transport = new Transport(port, true);
+                const esploader = new ESPLoader({
+                    transport: transport,
+                    baudrate: 115200,
+                    terminal: logTerminal
+                });
+                const chipRev = await esploader.main();
+                const chipName = esploader.chip.CHIP_NAME;
+                logTerminal.writeLine(`[System] Connected to ${chipRev}. Bootloader offset: ${esploader.chip.BOOTLOADER_FLASH_OFFSET}.`);
+                let isFactory = false;
+                const fileArray = [];
+                for (const item of flashConfig) {
+                    if (chipName !== item.chip) {
+                        throw new Error(`Chip mismatch! Firmware is for ${item.chip}, but connected board is ${chipName}.`);
+                    }
+                    isFactory = item.isFactory;
+                    logTerminal.writeLine(`[System] Downloading binary: ${item.path}...`);
+                    const response = await fetch(item.path);
+                    if (!response.ok) throw new Error(`Failed to fetch binary. HTTP status: ${response.status}`);
+                    const firmwareData = new Uint8Array(await response.arrayBuffer());
+                    item.offsets.forEach(offset => {
+                        fileArray.push({
+                            data: firmwareData,
+                            address: offset
+                        });
+                    });
+                }
+                logTerminal.writeLine("[System] Firmware verified and loaded.");
+                const flashOptions = {
+                    fileArray: fileArray,
+                    flashMode: "keep",
+                    flashFreq: "keep",
+                    flashSize: "detect",
+                    eraseAll: isFactory,
+                    compress: true,
+                    reportProgress: (fileIndex, written, total) => {
+                        const percent = ((written / total) * 100).toFixed(1);
+                        showProgress(percent);
+                    }
+                };
+                showProgress(0);
+                logTerminal.writeLine(`[System] Flashing ${chipName}...`);
+                await esploader.writeFlash(flashOptions);
+                logTerminal.writeLine("[System] Firmware flashed successfully!");
+                await esploader.after("hard_reset");
+                logTerminal.writeLine(`[System] ${chipName} has been reset.`);
+            } catch (error) {
+                console.error("Error during flashing:", error);
+                logTerminal.writeLine(`\n[Error] Failed to flash: ${error.message}`);
+            } finally {
+                if (transport) {
+                    try {
+                        await transport.disconnect();
+                        logTerminal.writeLine("[System] Disconnected from port.");
+                    } catch (disconnectError) {
+                        logTerminal.writeLine("[System] Disconnect error:", disconnectError);
+                    }
+                    transport = null;
+                }
+                enableEl();
+            }
         }
         selectEl.addEventListener('change', updateManifest);
         modeRadioEls.forEach(radio => radio.addEventListener('change', updateManifest));
+        buttonEl.addEventListener('click', flashFirmware);
         initInstaller();
     </script>
 </body>
