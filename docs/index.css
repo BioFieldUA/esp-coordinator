@@ -99,7 +99,7 @@ select {
     }
 
     .mode-option:has(input:checked:not(:disabled)) {
-        background: #e8f5e9;
+        background: #e0f5e2;
         border-color: #4caf50;
     }
 
@@ -143,24 +143,49 @@ select {
 .instruction-box {
     background: #fff9e6;
     border-left: 4px solid #ffcc00;
-    padding: 15px;
+    padding: 5px 12px;
     margin: 15px 0;
     text-align: left;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.4;
 }
 
 .instruction-title {
-    color: #b38600;
+    color: #d39600;
     font-weight: bold;
-    margin-bottom: 4px;
     font-size: 15px;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    opacity: 0.8;
+    transition: all 0.5s ease;
+}
+
+    .instruction-title:hover {
+        color: #e28600;
+        opacity: 1;
+    }
+
+.instruction-subtitle {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: normal;
+    color: #555;
+}
+
+.instruction-box summary {
+    list-style: none;
+}
+
+.instruction-box[open] .instruction-title {
+    margin-bottom: 5px;
 }
 
 .instruction-box ol {
     margin: 0;
-    padding-left: 20px;
+    padding-left: 25px;
 }
 
     .instruction-box ol li strong {

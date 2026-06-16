@@ -37,8 +37,11 @@
         <select id="board-select" disabled>
             <option value="">Waiting for release download...</option>
         </select>
-        <div class="instruction-box">
-            <div class="instruction-title">⚠️ Flash Mode Activation:</div>
+        <details class="instruction-box">
+            <summary class="instruction-title">
+                ⚠️ Flash Mode Activation
+                <span class="instruction-subtitle">click here if connection gets stuck or times out</span>
+            </summary>
             <ol>
                 <li>Connect the ESP32-board to your computer via USB.</li>
                 <li>Press and <strong>hold</strong> the <strong>BOOT</strong> button.</li>
@@ -47,7 +50,7 @@
                 <li>Now click the <strong>Connect & Flash</strong> button below to start flashing.</li>
                 <li style="color: #b32400;">After successful flashing click the <strong>RESET</strong> button once again to launch your Coordinator.</li>
             </ol>
-        </div>
+        </details>
         <div id="install-btn-box">
             <button id="install-btn" disabled>Connect & Flash</button>
             <div class="terminal-box">

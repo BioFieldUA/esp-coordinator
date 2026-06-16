@@ -1,7 +1,7 @@
 # ESP32-Coordinator (Zigbee NCP Firmware)
 
-[![GitHub Release](https://img.shields.io/github/v/release/BioFieldUA/esp-coordinator)](https://github.com/BioFieldUA/esp-coordinator/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-PolyForm_Strict_1.0.0-yellow.svg)](./LICENSE.txt)
+[![GitHub Release](https://badgen.net/github/release/BioFieldUA/esp-coordinator?color=blue)](https://github.com/BioFieldUA/esp-coordinator/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-PolyForm_Strict_1.0.0-yellow.svg)](https://github.com/BioFieldUA/esp-coordinator?tab=License-1-ov-file)
 
 A high-performance, professional Zigbee Network Co-Processor (NCP) firmware designed for modern Espressif chips (**ESP32-C5, ESP32-C6, ESP32-H2**).
 This project transforms your ESP32-board into a robust **Zigbee Coordinator** tailored for seamless integration with **Zigbee2MQTT (Z2M)**.
@@ -409,7 +409,7 @@ If you encounter bugs, missing chip parameters, or want to suggest improvements,
 ---
 
 ## 📄 License
-This project is licensed under the **[PolyForm Strict License 1.0.0](./LICENSE.txt)**.
+This project is licensed under the **[PolyForm Strict License 1.0.0](https://github.com/BioFieldUA/esp-coordinator?tab=License-1-ov-file)**.
 * Non-commercial use, testing, and personal research are permitted.
 * Commercial production, integration into commercial platforms, or sales require a dedicated license.
 
