@@ -490,6 +490,7 @@ template <> struct zb_ncp::cmd_handle<GET_MODULE_VERSION> :
         res->fwVersion = OTA_APP_VERSION;
         res->stackVersion = zboss_version_get();
         res->protocolVersion = ZB_PROTOCOL_VERSION;
+        begin_callback(1);
     }
 };
 
@@ -498,6 +499,7 @@ template <> struct zb_ncp::cmd_handle<GET_COORDINATOR_VERSION> :
     general_status_res<GET_COORDINATOR_VERSION, uint8_t> {
     static void process_status_res(ncp_generic_status_t& status, uint8_t* res) {
         *res = zb_ncp::DEVICE_VERSION; // zb_aib_get_coordinator_version();
+        begin_callback(2);
     }
 };
 

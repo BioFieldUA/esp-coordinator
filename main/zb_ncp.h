@@ -12,12 +12,13 @@ extern "C" {
     void zboss_signal_handler(zb_uint8_t param);
     bool zb_zcl_green_power_cluster_handler(zb_uint8_t param);
     void commissioning_callback(zb_uint8_t param);
+    void begin_callback(zb_uint8_t param);
     void wakeup_callback(zb_uint8_t param);
     zb_uint8_t data_indication_callback(zb_uint8_t param);
     void zb_zgp_gpdf_raw_indication(zb_bufid_t buf_ref);
     void device_attribute_callback(zb_uint8_t param);
     void firmware_upgrade_callback(zb_uint8_t param);
-    zb_bool_t set_real_time_clock(zb_uint32_t time);
+    void clock_update_callback(zb_uint8_t param);
     zb_uint8_t zcl_specific_cluster_cmd_handler(zb_uint8_t param);
 }
 
@@ -62,6 +63,8 @@ extern "C" {
 /** A custom firmware version depends on the ESP32-board and the connection interface (USB, UART).
  */
 #define OTA_HARDWARE_VERSION        (_CURRENT_HW_CHIP | _CURRENT_HW_ANT | _CURRENT_HW_BUS)
+
+#define ZB_TIME_SHIFT               946684800ULL
 
 #define ZB_APS_FRAME_DATA           0U
 #define ZB_APS_FRAME_COMMAND        1U
@@ -142,7 +145,7 @@ public:
         zb_uint32_t g_attr_time_local_time = ZB_ZCL_TIME_LOCAL_TIME_DEFAULT_VALUE;
         zb_uint32_t g_attr_time_last_set_time = ZB_ZCL_TIME_LAST_SET_TIME_DEFAULT_VALUE;
         zb_uint32_t g_attr_time_valid_until_time = ZB_ZCL_TIME_VALID_UNTIL_TIME_DEFAULT_VALUE;
-        zb_uint8_t g_attr_time_time_status = (1 << ZB_ZCL_TIME_MASTER);
+        zb_uint8_t g_attr_time_time_status = ZB_ZCL_TIME_TIME_STATUS_DEFAULT_VALUE;
         // OTA Client cluster attributes data
         zb_ieee_addr_t g_attr_ota_client_upgrade_server = ZB_ZCL_OTA_UPGRADE_SERVER_DEF_VALUE;
         zb_uint32_t g_attr_ota_client_file_offset = ZB_ZCL_OTA_UPGRADE_FILE_OFFSET_DEF_VALUE;
@@ -160,6 +163,10 @@ public:
         // Color Control cluster attributes data
         zb_uint16_t g_attr_color_control_current_X = ZB_ZCL_COLOR_CONTROL_CURRENT_X_DEF_VALUE;
         zb_uint16_t g_attr_color_control_current_Y = ZB_ZCL_COLOR_CONTROL_CURRENT_Y_DEF_VALUE;
+        // Init attributes data
+        zb_uint8_t g_init_module_ver_count = 0;
+        zb_uint8_t g_init_coord_ver_count = 0;
+        zb_bool_t g_init_done = ZB_FALSE;
     };
     struct cmd_t {
         uint8_t version;
@@ -225,12 +232,13 @@ private:
     friend void zboss_signal_handler(zb_uint8_t param);
     friend bool zb_zcl_green_power_cluster_handler(zb_uint8_t param);
     friend void commissioning_callback(zb_uint8_t param);
+    friend void begin_callback(zb_uint8_t param);
     friend void wakeup_callback(zb_uint8_t param);
     friend zb_uint8_t data_indication_callback(zb_uint8_t param);
     friend void zb_zgp_gpdf_raw_indication(zb_bufid_t buf_ref);
     friend void device_attribute_callback(zb_uint8_t param);
     friend void firmware_upgrade_callback(zb_uint8_t param);
-    friend zb_bool_t set_real_time_clock(zb_uint32_t time);
+    friend void clock_update_callback(zb_uint8_t param);
     friend zb_uint8_t zcl_specific_cluster_cmd_handler(zb_uint8_t param);
     void task_impl();
     static inline void task(void* pvParameter) { static_cast<zb_ncp*>(pvParameter)->task_impl(); }
@@ -243,6 +251,7 @@ private:
     static void delete_gp_device(uint8_t* payload, uint16_t payload_len);
     static bool gp_device_commissioning(zb_zgpd_id_t* zgpd_id, zb_uint8_t device_id, zb_uint16_t manuf_id, zb_uint16_t manuf_model_id, zb_ieee_addr_t ieee_addr);
     static bool gp_device_indication(zb_zgpd_id_t* zgpd_id);
+    static bool set_esp_clock(zb_uint32_t zb_time, zb_int32_t zb_time_zone, zb_uint32_t zb_dst_shift, zb_uint32_t zb_dst_start, zb_uint32_t zb_dst_end);
     static inline portMUX_TYPE m_mux_lock = portMUX_INITIALIZER_UNLOCKED;
     SemaphoreHandle_t m_stop_sem{ nullptr };
     TaskHandle_t m_task_handle{ nullptr };

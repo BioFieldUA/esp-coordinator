@@ -117,7 +117,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import https from "https";
-import { Zcl } from "zigbee-herdsman";
+import { getTimeClusterAttributes, Zcl } from "zigbee-herdsman";
 
 export default class OTACoordinatorExtension {
     constructor(zigbee, mqtt, state, publishEntityState, eventBus, enableDisableExtension, restartCallback, addExtension, settings, logger) {
@@ -175,14 +175,24 @@ export default class OTACoordinatorExtension {
     }
 
     onMessage(msg) {
-        if (this.isUpdating || msg?.device.type !== "Coordinator" || msg.cluster !== "genOta" || msg.type !== "attributeReport" || !msg.data?.currentFileVersion || !msg.data.manufacturerId || !msg.data.imageTypeId || !msg.data.currentZigbeeStackVersion || !msg.data.minimumBlockReqDelay) return;
-        this.isUpdating = true;
+        if (msg?.device?.type !== "Coordinator" || msg.type !== "attributeReport" || !msg.data) return;
         const extLogger = this.logger;
-        this.otaSettings.default_maximum_data_size = msg.data.minimumBlockReqDelay;
+        if (msg.cluster === "genTime" && msg.data.time) {
+            const { time, timeStatus, timeZone, dstStart, dstEnd, dstShift, validUntilTime } = getTimeClusterAttributes();
+            if (time !== msg.data.time) {
+                msg.endpoint?.write("genTime", { time, timeStatus, timeZone, dstStart, dstEnd, dstShift, validUntilTime }, "queue")
+                .catch((err) => {
+                    extLogger.error(`[Automation] Failed to queue time attributes: ${err.message}`);
+                });
+            }
+        }
+        if (this.isUpdating || msg.cluster !== "genOta" || !msg.data.currentFileVersion || !msg.data.manufacturerId || !msg.data.imageTypeId || !msg.data.currentZigbeeStackVersion || !msg.data.minimumBlockReqDelay) return;
+        this.isUpdating = true;
         const source = {
             downgrade: false,
             url: this.tempFirmwarePath
         };
+        this.otaSettings.default_maximum_data_size = msg.data.minimumBlockReqDelay;
         const dataSettings = {
             requestTimeout: this.otaSettings.image_block_request_timeout ?? 150000,
             responseDelay: this.otaSettings.image_block_response_delay ?? 250,
@@ -223,7 +233,7 @@ export default class OTACoordinatorExtension {
                 {},
                 (progress, remaining) => extLogger.info(`[Automation] Coordinator updating progress: ${progress.toFixed(1)}%`),
                 dataSettings,
-                msg?.endpoint
+                msg.endpoint
             );
         }).then(([from, to]) => {
             extLogger.info(`[Automation] Coordinator successfully updated (v.${from.fileVersion} => v.${to.fileVersion})`);
@@ -234,7 +244,7 @@ export default class OTACoordinatorExtension {
                 extLogger.error(`[Automation] Coordinator OTA Update Error: ${err.message}`);
             }
             if (!fs.existsSync(source.url)) {
-                msg.endpoint.commandResponse("genOta", "queryNextImageResponse", { status: Zcl.Status.NO_IMAGE_AVAILABLE }, undefined, tsn).catch(() => {});
+                msg.endpoint?.commandResponse("genOta", "queryNextImageResponse", { status: Zcl.Status.NO_IMAGE_AVAILABLE }, undefined, tsn).catch(() => {});
             }
         }).finally(() => {
             if (fs.existsSync(source.url)) fs.unlink(source.url, () => {});

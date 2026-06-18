@@ -86,7 +86,6 @@ esp_err_t zb_ncp::init_impl() {
     // ZB_ZCL_SET_NO_REPORTING_CB
     // ZB_ZCL_SET_DEFAULT_VALUE_CB
     ZB_ZCL_REGISTER_DEVICE_CB(device_attribute_callback);
-    ZB_ZCL_TIME_SET_REAL_TIME_CLOCK_CB(set_real_time_clock);
     zb_set_network_coordinator_role(storage::app_config().channel_mask);
     zb_set_channel_mask(storage::app_config().channel_mask);
     zb_set_bdb_primary_channel_set(storage::app_config().channel_mask);
@@ -182,9 +181,10 @@ bool zb_ncp::start_zigbee_stack_impl() {
 
 esp_err_t zb_ncp::sync_mapping_table_from_nvram() {
     d_mapping_table_size = 0;
-    zb_zgp_ent_enumerate_ctx_t enum_ctx;
-    enum_ctx.idx = ZB_ZGP_ENT_ENUMERATE_CTX_START_IDX;
-    enum_ctx.entries_count = 0;
+    zb_zgp_ent_enumerate_ctx_t enum_ctx = {
+        .idx = ZB_ZGP_ENT_ENUMERATE_CTX_START_IDX,
+        .entries_count = 0
+    };
     zgp_tbl_ent_t db_entry;
     zb_uint16_t actual_count = 0;
     while (zgp_sink_table_enumerate(&enum_ctx, &db_entry) == RET_OK) {
@@ -487,6 +487,37 @@ bool zb_ncp::gp_device_indication(zb_zgpd_id_t* zgpd_id) {
     return true;
 }
 
+bool zb_ncp::set_esp_clock(zb_uint32_t zb_time, zb_int32_t zb_time_zone, zb_uint32_t zb_dst_shift, zb_uint32_t zb_dst_start, zb_uint32_t zb_dst_end) {
+    if (zb_time == ZB_ZCL_TIME_TIME_INVALID_VALUE) {
+        ESP_LOGE(TAG, "Ignoring Invalid Time value");
+        return false;
+    }
+    timeval tv = {
+        .tv_sec = static_cast<time_t>(zb_time + ZB_TIME_SHIFT),
+        .tv_usec = 0
+    };
+    if (settimeofday(&tv, nullptr) != 0) {
+        ESP_LOGE(TAG, "Failed to set ESP32 time via settimeofday");
+        return false;
+    }
+    int std_offset_hours = static_cast<int>(-(zb_time_zone / 3600));
+    int dst_offset_hours = std_offset_hours - static_cast<int>(zb_dst_shift / 3600);
+    time_t unix_dst_start = static_cast<time_t>(zb_dst_start + ZB_TIME_SHIFT);
+    time_t unix_dst_end = static_cast<time_t>(zb_dst_end + ZB_TIME_SHIFT);
+    tm tm_buf{};
+    gmtime_r(&unix_dst_start, &tm_buf);
+    int day_start = tm_buf.tm_yday;
+    int hour_start = tm_buf.tm_hour;
+    gmtime_r(&unix_dst_end, &tm_buf);
+    int day_end = tm_buf.tm_yday;
+    int hour_end = tm_buf.tm_hour;
+    char tz_str[64]{};
+    snprintf(tz_str, sizeof(tz_str), "STD%+dDST%+d,%d/%d,%d/%d", std_offset_hours, dst_offset_hours, day_start, hour_start, day_end, hour_end);
+    setenv("TZ", tz_str, 1);
+    tzset();
+    return true;
+}
+
 void zb_ncp::on_rx_data(const void* data, uint16_t size) {
     auto cmd = static_cast<const cmd_t*>(data);
     if (cmd->type != REQUEST && cmd->type != RESPONSE) {
@@ -546,6 +577,31 @@ void device_attribute_callback(zb_uint8_t param) {
         return;
     }
     switch (dev_prm->device_cb_id) {
+    case ZB_ZCL_SET_ATTR_VALUE_CB_ID:
+        switch (dev_prm->cb_param.set_attr_value_param.cluster_id) {
+        case ZB_ZCL_CLUSTER_ID_TIME:
+            if (dev_prm->cb_param.set_attr_value_param.attr_id == ZB_ZCL_ATTR_TIME_VALID_UNTIL_TIME_ID) {
+                if (zb_ncp::set_esp_clock(dev_ctx.g_attr_time_time, dev_ctx.g_attr_time_time_zone, dev_ctx.g_attr_time_dst_shift, dev_ctx.g_attr_time_dst_start, dev_ctx.g_attr_time_dst_end)) {
+                    dev_ctx.g_attr_time_time_status = (1 << ZB_ZCL_TIME_MASTER) | (1 << ZB_ZCL_TIME_MASTER_ZONE_DST) | (1 << ZB_ZCL_TIME_SUPERSEDING);
+                    zb_uint32_t current_zb_time = static_cast<zb_uint32_t>(time(nullptr) - ZB_TIME_SHIFT);
+                    zb_uint32_t interval = dev_ctx.g_attr_time_valid_until_time - current_zb_time;
+                    interval = (interval > 300) ? (interval - 300) : 0;
+                    ZB_SCHEDULE_APP_ALARM(clock_update_callback, 0, interval * ZB_TIME_ONE_SECOND);
+                }
+            }
+            else {
+                ESP_LOGW(TAG, "TIME CLUSTER attribute: %04x, value: %lu",
+                    dev_prm->cb_param.set_attr_value_param.attr_id, dev_prm->cb_param.set_attr_value_param.values.data32
+                );
+            }
+            break;
+        default:
+            ESP_LOGW(TAG, "ZB_ZCL_SET_ATTR_VALUE_CB_ID: cluster: %04x, attribute: %04x",
+                dev_prm->cb_param.set_attr_value_param.cluster_id, dev_prm->cb_param.set_attr_value_param.attr_id
+            );
+            break;
+        }
+        break;
     case ZB_ZCL_OTA_UPGRADE_VALUE_CB_ID:
         {
             auto resp = &dev_prm->cb_param.ota_value_param;
@@ -724,27 +780,44 @@ void firmware_upgrade_callback(zb_uint8_t param) {
     );
 }
 
-zb_bool_t set_real_time_clock(zb_uint32_t time) {
-    if (time == ZB_ZCL_TIME_TIME_INVALID_VALUE) {
-        ESP_LOGE(TAG, "Ignoring Invalid Time value");
-        return ZB_FALSE;
+void clock_update_callback(zb_uint8_t param) {
+    auto buf = zb_buf_get_out();
+    if (!buf) {
+        ESP_LOGE(TAG, "Cannot allocate out buffer for Time Sync Request");
+        return;
     }
-    time_t unix_timestamp = (time_t)time + 946684800ULL;
-    struct timeval tv;
-    tv.tv_sec = unix_timestamp;
-    tv.tv_usec = 0;
-    if (settimeofday(&tv, NULL) == 0) {
-        char strftime_buf[64];
-        struct tm timeinfo;
-        localtime_r(&unix_timestamp, &timeinfo);
-        size_t bytes_written = strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
-        if (bytes_written > 0) {
-            ESP_LOGI(TAG, "Current coordinator local time: %s", strftime_buf);
-        }
-        return ZB_TRUE;
-    } 
-    ESP_LOGE(TAG, "Failed to set system time via settimeofday");
-    return ZB_FALSE;
+    zb_uint16_t target_short_addr = 0x0000;
+    zb_uint8_t frame_control = ZB_ZCL_CONSTRUCT_FRAME_CONTROL(
+        ZB_ZCL_FRAME_TYPE_COMMON,
+        ZB_ZCL_NOT_MANUFACTURER_SPECIFIC,
+        ZB_ZCL_FRAME_DIRECTION_TO_CLI,
+        ZB_ZCL_DISABLE_DEFAULT_RESPONSE
+    );
+    zb_uint8_t* ptr = static_cast<zb_uint8_t*>(zb_zcl_start_command_header(
+        buf,
+        frame_control,
+        0,
+        ZB_ZCL_CMD_REPORT_ATTRIB,
+        nullptr
+    ));
+    ptr = static_cast<zb_uint8_t*>(zb_put_next_htole16(ptr, ZB_ZCL_ATTR_TIME_TIME_ID));
+    *ptr = ZB_ZCL_ATTR_TYPE_U32; ptr++;
+    ptr = static_cast<zb_uint8_t*>(zb_put_next_htole32(ptr, ZB_ZCL_TIME_TIME_DEFAULT_VALUE));
+    dev_ctx.g_attr_time_time_status = ZB_ZCL_TIME_TIME_STATUS_DEFAULT_VALUE;
+    zb_zcl_finish_and_send_packet_new(
+        buf,
+        ptr,
+        reinterpret_cast<const zb_addr_u*>(&target_short_addr),
+        ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
+        COORDINATOR_ENDPOINT,
+        COORDINATOR_ENDPOINT,
+        ZB_AF_HA_PROFILE_ID,
+        ZB_ZCL_CLUSTER_ID_TIME,
+        nullptr,
+        ZB_FALSE,
+        ZB_FALSE,
+        0
+    );
 }
 
 static_assert(sizeof(zb_apsde_data_indication_t) == 32);
@@ -795,6 +868,24 @@ void commissioning_callback(zb_uint8_t param) {
     }
 }
 
+void begin_callback(zb_uint8_t param) {
+    if (dev_ctx.g_init_done) return;
+    if (param == 1) {
+        dev_ctx.g_init_module_ver_count++;
+    } else {
+        dev_ctx.g_init_coord_ver_count++;
+    }
+    if (dev_ctx.g_init_module_ver_count >= 2 && dev_ctx.g_init_coord_ver_count >= 2) {
+        dev_ctx.g_init_done = ZB_TRUE;
+        if (ZB_SCHEDULE_APP_ALARM(clock_update_callback, 0, 1 * ZB_TIME_ONE_SECOND) != RET_OK) {
+            ESP_LOGE(TAG, "SCHEDULE firmware upgrade failed: out of memory");
+        }
+        if (ZB_SCHEDULE_APP_ALARM(firmware_upgrade_callback, 0, 15 * ZB_TIME_ONE_SECOND) != RET_OK) {
+            ESP_LOGE(TAG, "SCHEDULE firmware upgrade failed: out of memory");
+        }
+    }
+}
+
 void zboss_signal_handler(zb_uint8_t param) {
     if (unlikely(!param)) return;
     zb_zdo_app_signal_hdr_t* sg_p = NULL;
@@ -807,9 +898,6 @@ void zboss_signal_handler(zb_uint8_t param) {
         {
             ESP_LOGI(TAG, "Initialize Zigbee Stack");
             zb_af_set_data_indication(data_indication_callback);
-            if (ZB_SCHEDULE_APP_ALARM(firmware_upgrade_callback, 0, 14 * ZB_TIME_ONE_SECOND) != RET_OK) {
-                ESP_LOGE(TAG, "Firmware upgrade failed: out of memory");
-            }
             zb_uint32_t func, act_func;
             zb_zgp_get_sink_functionality(&func, &act_func);
             ESP_LOGI(TAG, "Sink functionality: %08lx, Active sink functionality: %08lx", func, act_func);
@@ -826,11 +914,6 @@ void zboss_signal_handler(zb_uint8_t param) {
     case ZB_BDB_SIGNAL_DEVICE_REBOOT:
         if (success) {
             ESP_LOGI(TAG, "Network restored from NVRAM.");
-/*
-            if (ZB_SCHEDULE_APP_CALLBACK(commissioning_callback, ZB_BDB_NETWORK_STEERING) != RET_OK) {
-                ESP_LOGE(TAG, "Commissioning failed: out of memory");
-            }
-*/
         } else {
             ESP_LOGE(TAG, "Failed to initialize Zigbee Stack (error: %d)", ERROR_GET_CODE(status));
         }
@@ -881,11 +964,6 @@ void zboss_signal_handler(zb_uint8_t param) {
         if (success) {
             zb_ext_pan_id_t ext_pan_id;
             zb_get_extended_pan_id(ext_pan_id);
-/*
-            if (ZB_SCHEDULE_APP_CALLBACK(commissioning_callback, ZB_BDB_NETWORK_STEERING) != RET_OK) {
-                ESP_LOGE(TAG, "Commissioning failed: out of memory");
-            }
-*/
             ESP_LOGI(TAG, "Formed network successfully (ExtPanID: " IEEE_ADDR_FMT ", PanID: %04x, RadioChannel: %d)", IEEE_ADDR_PRINT(ext_pan_id), zb_get_pan_id(), zb_get_current_channel());
         } else {
             ESP_LOGE(TAG, "Network formation failed (error: %d)", ERROR_GET_CODE(status));
